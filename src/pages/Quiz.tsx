@@ -11,10 +11,12 @@ const MAX_QUESTIONS = 10;
 export default function Quiz() {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [shuffledOptions, setShuffledOptions] = useState<string[][]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [totalTimeLeft, setTotalTimeLeft] = useState(TOTAL_QUIZ_TIME);
+  const [timerWarning, setTimerWarning] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const { darkMode, startQuiz, addQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory } = useStore();
   const navigate = useNavigate();
@@ -34,8 +36,10 @@ export default function Quiz() {
           ...doc.data()
         })) as Question[];
         
-        const shuffled = [...fetchedQuestions].sort(() => Math.random() - 0.5).slice(0, MAX_QUESTIONS);
-        setQuestions(shuffled);
+        const shuffledQuestions = [...fetchedQuestions].sort(() => Math.random() - 0.5).slice(0, MAX_QUESTIONS);
+        const shuffledOpts = shuffledQuestions.map(q => [...q.options].sort(() => Math.random() - 0.5));
+        setQuestions(shuffledQuestions);
+        setShuffledOptions(shuffledOpts);
         startQuiz();
       } catch (error) {
         console.error('Error fetching questions:', error);
@@ -59,6 +63,12 @@ export default function Quiz() {
     }, 1000);
     return () => clearInterval(timer);
   }, [showFeedback, quizCompleted, currentQuestionIndex, questions.length]);
+
+  useEffect(() => {
+    if (totalTimeLeft <= 60 && totalTimeLeft > 0 && !timerWarning) {
+      setTimerWarning(true);
+    }
+  }, [totalTimeLeft, timerWarning]);
 
   const handleQuizComplete = () => {
     setQuizCompleted(true);
@@ -112,7 +122,9 @@ export default function Quiz() {
   }
 
   const currentQuestion = questions[currentQuestionIndex];
-  const isCorrect = selectedAnswer === currentQuestion?.correctAnswer;
+  const currentOptions = shuffledOptions[currentQuestionIndex] || [];
+  const correctAnswerIndex = currentQuestion ? currentOptions.indexOf(currentQuestion.options[currentQuestion.correctAnswer]) : -1;
+  const isCorrect = selectedAnswer === correctAnswerIndex;
 
   return (
     <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -125,6 +137,12 @@ export default function Quiz() {
             ⏱️ {Math.floor(totalTimeLeft / 60)}:{(totalTimeLeft % 60).toString().padStart(2, '0')}
           </div>
         </div>
+
+        {timerWarning && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-500 text-red-700 rounded-lg animate-pulse">
+            ⚠️ Warning: Less than 1 minute remaining!
+          </div>
+        )}
         
         <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
           <div 
@@ -154,10 +172,10 @@ export default function Quiz() {
           </h2>
           
           <div className="space-y-3">
-            {currentQuestion?.options.map((option, index) => {
+            {currentOptions.map((option, index) => {
               let buttonClass = `w-full p-4 text-left rounded-lg border-2 transition-all `;
               if (showFeedback) {
-                if (index === currentQuestion.correctAnswer) {
+                if (index === correctAnswerIndex) {
                   buttonClass += 'bg-green-500 border-green-500 text-white';
                 } else if (index === selectedAnswer && !isCorrect) {
                   buttonClass += 'bg-red-500 border-red-500 text-white';

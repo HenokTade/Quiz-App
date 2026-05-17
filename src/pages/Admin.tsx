@@ -51,6 +51,8 @@ export default function Admin() {
   const [bulkSuccess, setBulkSuccess] = useState('');
   const [bulkCategory, setBulkCategory] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -78,6 +80,39 @@ export default function Admin() {
     const snapshot = await getDocs(collection(db, 'questions'));
     setQuestions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Question[]);
   };
+
+  const exportToCSV = () => {
+    const filteredQuestions = questions.filter(q => {
+      const matchesSearch = q.question.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = !filterCategory || q.category === filterCategory;
+      return matchesSearch && matchesCategory;
+    });
+    
+    const headers = ['Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer', 'Explanation', 'Category'];
+    const rows = filteredQuestions.map(q => [
+      q.question,
+      q.options[0] || '',
+      q.options[1] || '',
+      q.options[2] || '',
+      q.options[3] || '',
+      q.options[q.correctAnswer] || '',
+      q.explanation || '',
+      categories.find(c => c.id === q.category)?.name || ''
+    ]);
+    
+    const csvContent = [headers, ...rows].map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'questions_export.csv';
+    link.click();
+  };
+
+  const filteredQuestions = questions.filter(q => {
+    const matchesSearch = q.question.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !filterCategory || q.category === filterCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -392,9 +427,37 @@ export default function Admin() {
               </button>
             </form>
 
-            <h3 className={`text-xl font-semibold mt-8 mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Existing Questions</h3>
+            <h3 className={`text-xl font-semibold mt-8 mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Existing Questions ({filteredQuestions.length})</h3>
+            
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search questions..."
+                className={`flex-1 p-3 border rounded-lg ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'border-gray-300'}`}
+              />
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className={`p-3 border rounded-lg ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'border-gray-300'}`}
+              >
+                <option value="">All Categories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={exportToCSV}
+                disabled={filteredQuestions.length === 0}
+                className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                Export CSV
+              </button>
+            </div>
+            
             <div className="space-y-4">
-              {questions.map(q => (
+              {filteredQuestions.map(q => (
                 <div key={q.id} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                   {editQuestionId === q.id && editQuestionData ? (
                     <div className="space-y-3">
