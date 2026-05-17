@@ -9,11 +9,27 @@ interface Category {
   name: string;
 }
 
+interface BulkUploadSection {
+  section_title: string;
+  questions: {
+    type: string;
+    question_text: string;
+    choices: string[];
+    correct_answer: string;
+    explanation: string;
+  }[];
+}
+
+interface BulkUploadData {
+  quiz_title?: string;
+  sections: BulkUploadSection[];
+}
+
 export default function Admin() {
   const { user, darkMode } = useStore();
   const [categories, setCategories] = useState<Category[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [activeTab, setActiveTab] = useState<'categories' | 'questions'>('categories');
+  const [activeTab, setActiveTab] = useState<'categories' | 'questions' | 'bulk'>('categories');
   const [newCategory, setNewCategory] = useState('');
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
@@ -29,6 +45,11 @@ export default function Admin() {
   });
   const [editQuestionId, setEditQuestionId] = useState<string | null>(null);
   const [editQuestionData, setEditQuestionData] = useState<Question | null>(null);
+  const [bulkJson, setBulkJson] = useState('');
+  const [bulkError, setBulkError] = useState('');
+  const [bulkSuccess, setBulkSuccess] = useState('');
+  const [bulkCategory, setBulkCategory] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -136,6 +157,73 @@ export default function Admin() {
     setEditQuestionData(null);
   };
 
+  const validateBulkJson = (json: string): { valid: boolean; data?: BulkUploadData; error?: string } => {
+    try {
+      const parsed = JSON.parse(json) as BulkUploadData;
+      if (!parsed.sections || !Array.isArray(parsed.sections)) {
+        return { valid: false, error: 'Invalid format: "sections" array is required' };
+      }
+      for (const section of parsed.sections) {
+        if (!section.section_title || !section.questions) {
+          return { valid: false, error: 'Each section must have "section_title" and "questions"' };
+        }
+        for (const q of section.questions) {
+          if (!q.question_text || !q.choices || !Array.isArray(q.choices) || q.choices.length < 2) {
+            return { valid: false, error: `Question "${q.question_text || 'unknown'}" must have at least 2 choices` };
+          }
+          if (!q.correct_answer) {
+            return { valid: false, error: `Question "${q.question_text}" must have a "correct_answer"` };
+          }
+        }
+      }
+      return { valid: true, data: parsed };
+    } catch (e) {
+      return { valid: false, error: `Invalid JSON: ${e instanceof Error ? e.message : 'Parse error'}` };
+    }
+  };
+
+  const handleBulkUpload = async () => {
+    setBulkError('');
+    setBulkSuccess('');
+    if (!bulkCategory) {
+      setBulkError('Please select a category');
+      return;
+    }
+    if (!bulkJson.trim()) {
+      setBulkError('Please paste JSON data');
+      return;
+    }
+    const validation = validateBulkJson(bulkJson);
+    if (!validation.valid || !validation.data) {
+      setBulkError(validation.error || 'Invalid JSON');
+      return;
+    }
+    setIsUploading(true);
+    try {
+      let questionsAdded = 0;
+      for (const section of validation.data.sections) {
+        for (const q of section.questions) {
+          const correctIndex = q.choices.indexOf(q.correct_answer);
+          await addDoc(collection(db, 'questions'), {
+            question: q.question_text,
+            options: q.choices,
+            correctAnswer: correctIndex >= 0 ? correctIndex : 0,
+            explanation: q.explanation || '',
+            category: bulkCategory
+          });
+          questionsAdded++;
+        }
+      }
+      setBulkSuccess(`Successfully added ${questionsAdded} questions!`);
+      setBulkJson('');
+      fetchQuestions();
+    } catch (e) {
+      setBulkError(`Error uploading: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   if (!user || user.role !== 'admin') {
     return null;
   }
@@ -157,6 +245,12 @@ export default function Admin() {
             className={`px-6 py-3 rounded-lg ${activeTab === 'questions' ? 'bg-indigo-600 text-white' : darkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'}`}
           >
             Questions
+          </button>
+          <button
+            onClick={() => setActiveTab('bulk')}
+            className={`px-6 py-3 rounded-lg ${activeTab === 'bulk' ? 'bg-indigo-600 text-white' : darkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'}`}
+          >
+            Bulk Upload
           </button>
         </div>
 
@@ -337,6 +431,89 @@ export default function Admin() {
                   )}
                 </div>
               ))}
+            </div>
+</div>
+          )}
+
+        {activeTab === 'bulk' && (
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
+            <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Bulk Upload Questions (JSON)</h2>
+            
+            <div className="mb-4">
+              <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Select Category</label>
+              <select
+                value={bulkCategory}
+                onChange={(e) => setBulkCategory(e.target.value)}
+                className={`w-full p-3 border rounded-lg ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'border-gray-300'}`}
+              >
+                <option value="">Select category</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Paste JSON Data</label>
+              <textarea
+                value={bulkJson}
+                onChange={(e) => setBulkJson(e.target.value)}
+                placeholder={`{
+  "quiz_title": "Holy Books Study - Grade 8",
+  "sections": [
+    {
+      "section_title": "Chapter 1: The Pentateuch",
+      "questions": [
+        {
+          "type": "multiple_choice",
+          "question_text": "What is the meaning of the word 'Torah'?",
+          "choices": ["History", "Law or Instruction", "Prophecy", "Poetry"],
+          "correct_answer": "Law or Instruction",
+          "explanation": "In Hebrew, 'Torah' means instruction or law."
+        }
+      ]
+    }
+  ]
+}`}
+                className={`w-full p-3 border rounded-lg font-mono text-sm ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'border-gray-300'}`}
+                rows={15}
+              />
+            </div>
+
+            {bulkError && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">{bulkError}</div>
+            )}
+            {bulkSuccess && (
+              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">{bulkSuccess}</div>
+            )}
+
+            <button
+              onClick={handleBulkUpload}
+              disabled={isUploading}
+              className={`bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {isUploading ? 'Uploading...' : 'Upload Questions'}
+            </button>
+
+            <div className={`mt-6 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+              <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>JSON Format Example:</h3>
+              <pre className={`text-xs overflow-x-auto ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{`{
+  "quiz_title": "My Quiz",
+  "sections": [
+    {
+      "section_title": "Chapter 1",
+      "questions": [
+        {
+          "type": "multiple_choice",
+          "question_text": "Your question here?",
+          "choices": ["Option A", "Option B", "Option C", "Option D"],
+          "correct_answer": "Option A",
+          "explanation": "Optional explanation"
+        }
+      ]
+    }
+  ]
+}`}</pre>
             </div>
           </div>
         )}
