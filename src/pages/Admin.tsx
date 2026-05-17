@@ -4,12 +4,19 @@ import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
 import { useNavigate } from 'react-router-dom';
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 export default function Admin() {
   const { user, darkMode } = useStore();
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [activeTab, setActiveTab] = useState<'categories' | 'questions'>('categories');
   const [newCategory, setNewCategory] = useState('');
+  const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
   const [newQuestion, setNewQuestion] = useState({
     question: '',
     option1: '',
@@ -20,6 +27,8 @@ export default function Admin() {
     explanation: '',
     category: ''
   });
+  const [editQuestionId, setEditQuestionId] = useState<string | null>(null);
+  const [editQuestionData, setEditQuestionData] = useState<Question | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -57,6 +66,24 @@ export default function Admin() {
     fetchQuestions();
   };
 
+  const handleEditCategory = (cat: Category) => {
+    setEditCategoryId(cat.id);
+    setEditCategoryName(cat.name);
+  };
+
+  const handleUpdateCategory = async () => {
+    if (!editCategoryId || !editCategoryName.trim()) return;
+    await updateDoc(doc(db, 'categories', editCategoryId), { name: editCategoryName });
+    setEditCategoryId(null);
+    setEditCategoryName('');
+    fetchCategories();
+  };
+
+  const handleCancelEditCategory = () => {
+    setEditCategoryId(null);
+    setEditCategoryName('');
+  };
+
   const handleAddQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQuestion.question || !newQuestion.category) return;
@@ -83,6 +110,30 @@ export default function Admin() {
   const handleDeleteQuestion = async (id: string) => {
     await deleteDoc(doc(db, 'questions', id));
     fetchQuestions();
+  };
+
+  const handleEditQuestion = (q: Question) => {
+    setEditQuestionId(q.id);
+    setEditQuestionData(q);
+  };
+
+  const handleUpdateQuestion = async () => {
+    if (!editQuestionId || !editQuestionData) return;
+    await updateDoc(doc(db, 'questions', editQuestionId), {
+      question: editQuestionData.question,
+      options: editQuestionData.options,
+      correctAnswer: editQuestionData.correctAnswer,
+      explanation: editQuestionData.explanation,
+      category: editQuestionData.category
+    });
+    setEditQuestionId(null);
+    setEditQuestionData(null);
+    fetchQuestions();
+  };
+
+  const handleCancelEditQuestion = () => {
+    setEditQuestionId(null);
+    setEditQuestionData(null);
   };
 
   if (!user || user.role !== 'admin') {
@@ -127,13 +178,26 @@ export default function Admin() {
             <div className="space-y-2">
               {categories.map(cat => (
                 <div key={cat.id} className={`flex justify-between items-center p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <span className={darkMode ? 'text-white' : 'text-gray-900'}>{cat.name}</span>
-                  <button
-                    onClick={() => handleDeleteCategory(cat.id)}
-                    className="text-red-600 hover:underline"
-                  >
-                    Delete
-                  </button>
+                  {editCategoryId === cat.id ? (
+                    <div className="flex gap-2 flex-1">
+                      <input
+                        type="text"
+                        value={editCategoryName}
+                        onChange={(e) => setEditCategoryName(e.target.value)}
+                        className={`flex-1 p-2 border rounded ${darkMode ? 'bg-gray-600 text-white' : 'bg-white'}`}
+                      />
+                      <button onClick={handleUpdateCategory} className="text-green-600 hover:underline">Save</button>
+                      <button onClick={handleCancelEditCategory} className="text-gray-500 hover:underline">Cancel</button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className={darkMode ? 'text-white' : 'text-gray-900'}>{cat.name}</span>
+                      <div className="flex gap-3">
+                        <button onClick={() => handleEditCategory(cat)} className="text-indigo-600 hover:underline">Edit</button>
+                        <button onClick={() => handleDeleteCategory(cat.id)} className="text-red-600 hover:underline">Delete</button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -210,15 +274,67 @@ export default function Admin() {
             <div className="space-y-4">
               {questions.map(q => (
                 <div key={q.id} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <div className="flex justify-between items-start">
-                    <div className={darkMode ? 'text-white' : 'text-gray-900'}>
-                      <p className="font-medium">{q.question}</p>
-                      <p className="text-sm text-gray-500">{categories.find(c => c.id === q.category)?.name}</p>
+                  {editQuestionId === q.id && editQuestionData ? (
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={editQuestionData.question}
+                        onChange={(e) => setEditQuestionData({ ...editQuestionData, question: e.target.value })}
+                        className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-600 text-white' : 'bg-white'}`}
+                      />
+                      {editQuestionData.options.map((opt, i) => (
+                        <div key={i} className="flex gap-2">
+                          <input
+                            type="radio"
+                            name={`correct-${q.id}`}
+                            checked={editQuestionData.correctAnswer === i}
+                            onChange={() => setEditQuestionData({ ...editQuestionData, correctAnswer: i })}
+                          />
+                          <input
+                            type="text"
+                            value={opt}
+                            onChange={(e) => {
+                              const newOptions = [...editQuestionData.options];
+                              newOptions[i] = e.target.value;
+                              setEditQuestionData({ ...editQuestionData, options: newOptions });
+                            }}
+                            className={`flex-1 p-2 border rounded ${darkMode ? 'bg-gray-600 text-white' : 'bg-white'}`}
+                          />
+                        </div>
+                      ))}
+                      <textarea
+                        value={editQuestionData.explanation}
+                        onChange={(e) => setEditQuestionData({ ...editQuestionData, explanation: e.target.value })}
+                        placeholder="Explanation"
+                        className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-600 text-white' : 'bg-white'}`}
+                      />
+                      <select
+                        value={editQuestionData.category}
+                        onChange={(e) => setEditQuestionData({ ...editQuestionData, category: e.target.value })}
+                        className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-600 text-white' : 'bg-white'}`}
+                      >
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                      <div className="flex gap-2">
+                        <button onClick={handleUpdateQuestion} className="bg-green-600 text-white px-4 py-2 rounded">Save</button>
+                        <button onClick={handleCancelEditQuestion} className="bg-gray-500 text-white px-4 py-2 rounded">Cancel</button>
+                      </div>
                     </div>
-                    <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-600 hover:underline">
-                      Delete
-                    </button>
-                  </div>
+                  ) : (
+                    <div className="flex justify-between items-start">
+                      <div className={darkMode ? 'text-white' : 'text-gray-900'}>
+                        <p className="font-medium">{q.question}</p>
+                        <p className="text-sm text-gray-500">{categories.find(c => c.id === q.category)?.name}</p>
+                        <p className="text-sm text-green-600">Correct: {q.options[q.correctAnswer]}</p>
+                      </div>
+                      <div className="flex gap-3">
+                        <button onClick={() => handleEditQuestion(q)} className="text-indigo-600 hover:underline">Edit</button>
+                        <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-600 hover:underline">Delete</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -33,6 +33,8 @@ interface AppState {
   currentQuestionIndex: number;
   quizAnswers: { questionIndex: number; selectedAnswer: number }[];
   quizStartTime: number;
+  currentCategoryId: string;
+  currentCategoryName: string;
   setUser: (user: User | null) => void;
   setDarkMode: (dark: boolean) => void;
   setCurrentQuiz: (questions: Question[]) => void;
@@ -40,6 +42,7 @@ interface AppState {
   addQuizAnswer: (answer: { questionIndex: number; selectedAnswer: number }) => void;
   startQuiz: () => void;
   resetQuiz: () => void;
+  setCurrentCategory: (id: string, name: string) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -49,6 +52,8 @@ export const useStore = create<AppState>((set) => ({
   currentQuestionIndex: 0,
   quizAnswers: [],
   quizStartTime: 0,
+  currentCategoryId: '',
+  currentCategoryName: '',
   setUser: (user) => set({ user }),
   setDarkMode: (darkMode) => set({ darkMode }),
   setCurrentQuiz: (currentQuiz) => set({ currentQuiz }),
@@ -57,5 +62,6 @@ export const useStore = create<AppState>((set) => ({
     quizAnswers: [...state.quizAnswers, answer]
   })),
   startQuiz: () => set({ quizStartTime: Date.now(), currentQuestionIndex: 0, quizAnswers: [] }),
-  resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0 }),
+  resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, currentCategoryId: '', currentCategoryName: '' }),
+  setCurrentCategory: (id, name) => set({ currentCategoryId: id, currentCategoryName: name }),
 }));

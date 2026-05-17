@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { useStore } from '../store/useStore';
 
 export default function Results() {
-  const { currentQuiz, quizAnswers, user, darkMode, resetQuiz } = useStore();
+  const { currentQuiz, quizAnswers, user, darkMode, resetQuiz, currentCategoryName } = useStore();
   const [score, setScore] = useState(0);
   const navigate = useNavigate();
 
@@ -25,21 +25,22 @@ export default function Results() {
     setScore(correct);
 
     const saveResult = async () => {
-      if (user) {
-        await addDoc(collection(db, 'results'), {
-          userId: user.uid,
-          category: currentQuiz[0]?.category || 'unknown',
-          score: correct,
-          totalQuestions: currentQuiz.length,
-          date: new Date().toISOString(),
-          answers: quizAnswers.map(a => ({
-            questionIndex: a.questionIndex,
-            selectedAnswer: a.selectedAnswer,
-            isCorrect: currentQuiz[a.questionIndex]?.correctAnswer === a.selectedAnswer
-          }))
-        });
-      }
-    };
+    if (user) {
+      await addDoc(collection(db, 'results'), {
+        userId: user.uid,
+        category: currentCategoryName || currentQuiz[0]?.category || 'unknown',
+        categoryId: currentQuiz[0]?.category || '',
+        score: correct,
+        totalQuestions: currentQuiz.length,
+        date: new Date().toISOString(),
+        answers: quizAnswers.map(a => ({
+          questionIndex: a.questionIndex,
+          selectedAnswer: a.selectedAnswer,
+          isCorrect: currentQuiz[a.questionIndex]?.correctAnswer === a.selectedAnswer
+        }))
+      });
+    }
+  };
     saveResult();
   }, []);
 

@@ -11,6 +11,7 @@ import Home from './pages/Home';
 import Quiz from './pages/Quiz';
 import Results from './pages/Results';
 import Admin from './pages/Admin';
+import StudentDashboard from './pages/StudentDashboard';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useStore();
@@ -65,6 +66,7 @@ function AppContent() {
         <Route path="/quiz/:categoryId" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
         <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
         <Route path="/" element={<Navigate to="/login" />} />
       </Routes>
     </div>

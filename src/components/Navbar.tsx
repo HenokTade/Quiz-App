@@ -25,6 +25,7 @@ export default function Navbar() {
           </button>
           {user ? (
             <>
+              <Link to="/dashboard" className={`${darkMode ? 'text-indigo-400' : 'text-indigo-600'} hover:underline`}>Dashboard</Link>
               {user.role === 'admin' && (
                 <Link to="/admin" className="text-indigo-600 hover:underline">Admin</Link>
               )}

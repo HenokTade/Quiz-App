@@ -13,12 +13,18 @@ export default function Quiz() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME);
-  const { darkMode, startQuiz, addQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex } = useStore();
+  const { darkMode, startQuiz, addQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
+        const categoryDoc = await getDocs(query(collection(db, 'categories')));
+        const categoryData = categoryDoc.docs.find(d => d.id === categoryId);
+        const categoryName = categoryData?.data().name || 'Unknown';
+        
+        setCurrentCategory(categoryId!, categoryName);
+        
         const questionsSnapshot = await getDocs(query(collection(db, 'questions'), where('category', '==', categoryId)));
         const fetchedQuestions: Question[] = questionsSnapshot.docs.map((doc) => ({
           id: doc.id,
