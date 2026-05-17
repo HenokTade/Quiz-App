@@ -63,8 +63,15 @@ export default function Admin() {
   }, [user]);
 
   const fetchCategories = async () => {
-    const snapshot = await getDocs(collection(db, 'categories'));
-    setCategories(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as { id: string; name: string }[]);
+    console.log('Fetching categories...');
+    try {
+      const snapshot = await getDocs(collection(db, 'categories'));
+      console.log('Categories fetched:', snapshot.docs.length);
+      setCategories(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as { id: string; name: string }[]);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      alert('Error fetching categories: ' + err);
+    }
   };
 
   const fetchQuestions = async () => {
@@ -75,12 +82,18 @@ export default function Admin() {
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCategory.trim()) return;
-    const docRef = await addDoc(collection(db, 'categories'), { name: newCategory });
-    setNewCategory('');
-    setCategorySuccess('Category added successfully!');
-    setTimeout(() => setCategorySuccess(''), 3000);
-    await fetchCategories();
-    setNewCategory('');
+    console.log('Adding category:', newCategory);
+    try {
+      const docRef = await addDoc(collection(db, 'categories'), { name: newCategory });
+      console.log('Category added with ID:', docRef.id);
+      setNewCategory('');
+      setCategorySuccess('Category added successfully!');
+      setTimeout(() => setCategorySuccess(''), 3000);
+      await fetchCategories();
+    } catch (err) {
+      console.error('Error adding category:', err);
+      alert('Error adding category: ' + err);
+    }
   };
 
   const handleDeleteCategory = async (id: string) => {
