@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
+import { QuestionSkeleton, Skeleton } from '../components/Skeleton';
 
 const QUESTION_TIME = 30;
 
@@ -80,7 +81,21 @@ export default function Quiz() {
   };
 
   if (loading) {
-    return <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50'}`}>Loading...</div>;
+    return (
+      <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="mb-6 flex justify-between items-center">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-8 w-20" />
+          </div>
+          <Skeleton className="h-2 w-full mb-8" />
+          <QuestionSkeleton />
+          <div className="mt-6">
+            <Skeleton className="h-12 w-full" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (questions.length === 0) {

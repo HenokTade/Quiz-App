@@ -3,6 +3,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useStore } from '../store/useStore';
 import { useNavigate } from 'react-router-dom';
+import { CardSkeleton } from '../components/Skeleton';
 
 interface Category {
   id: string;
@@ -48,7 +49,11 @@ export default function Home() {
         </h1>
         <h2 className={`text-xl mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Choose a Category</h2>
         {loading ? (
-          <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Loading...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
         ) : categories.length === 0 ? (
           <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>No categories available yet.</p>
         ) : (
