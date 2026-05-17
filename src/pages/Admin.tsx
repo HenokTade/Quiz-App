@@ -31,6 +31,7 @@ export default function Admin() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [activeTab, setActiveTab] = useState<'categories' | 'questions' | 'bulk'>('categories');
   const [newCategory, setNewCategory] = useState('');
+  const [categorySuccess, setCategorySuccess] = useState('');
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
   const [newQuestion, setNewQuestion] = useState({
@@ -74,9 +75,12 @@ export default function Admin() {
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCategory.trim()) return;
-    await addDoc(collection(db, 'categories'), { name: newCategory });
+    const docRef = await addDoc(collection(db, 'categories'), { name: newCategory });
     setNewCategory('');
-    fetchCategories();
+    setCategorySuccess('Category added successfully!');
+    setTimeout(() => setCategorySuccess(''), 3000);
+    await fetchCategories();
+    setNewCategory('');
   };
 
   const handleDeleteCategory = async (id: string) => {
@@ -256,7 +260,15 @@ export default function Admin() {
 
         {activeTab === 'categories' && (
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
-            <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Manage Categories</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Manage Categories</h2>
+              <button
+                onClick={() => { fetchCategories(); fetchQuestions(); }}
+                className="text-indigo-600 hover:underline text-sm"
+              >
+                Refresh
+              </button>
+            </div>
             <form onSubmit={handleAddCategory} className="flex gap-4 mb-6">
               <input
                 type="text"
@@ -269,6 +281,9 @@ export default function Admin() {
                 Add
               </button>
             </form>
+            {categorySuccess && (
+              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">{categorySuccess}</div>
+            )}
             <div className="space-y-2">
               {categories.map(cat => (
                 <div key={cat.id} className={`flex justify-between items-center p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
