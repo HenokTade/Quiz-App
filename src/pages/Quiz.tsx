@@ -5,7 +5,8 @@ import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
 import { QuestionSkeleton, Skeleton } from '../components/Skeleton';
 
-const QUESTION_TIME = 30;
+const TOTAL_QUIZ_TIME = 300;
+const MAX_QUESTIONS = 10;
 
 export default function Quiz() {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -13,7 +14,8 @@ export default function Quiz() {
   const [loading, setLoading] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(QUESTION_TIME);
+  const [totalTimeLeft, setTotalTimeLeft] = useState(TOTAL_QUIZ_TIME);
+  const [quizCompleted, setQuizCompleted] = useState(false);
   const { darkMode, startQuiz, addQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory } = useStore();
   const navigate = useNavigate();
 
@@ -31,7 +33,9 @@ export default function Quiz() {
           id: doc.id,
           ...doc.data()
         })) as Question[];
-        setQuestions(fetchedQuestions);
+        
+        const shuffled = [...fetchedQuestions].sort(() => Math.random() - 0.5).slice(0, MAX_QUESTIONS);
+        setQuestions(shuffled);
         startQuiz();
       } catch (error) {
         console.error('Error fetching questions:', error);
@@ -43,18 +47,23 @@ export default function Quiz() {
   }, [categoryId]);
 
   useEffect(() => {
-    if (showFeedback || questions.length === 0) return;
+    if (showFeedback || quizCompleted || questions.length === 0) return;
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
+      setTotalTimeLeft((prev) => {
         if (prev <= 1) {
-          handleNextQuestion(null);
-          return QUESTION_TIME;
+          handleQuizComplete();
+          return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [showFeedback, currentQuestionIndex, questions.length]);
+  }, [showFeedback, quizCompleted, currentQuestionIndex, questions.length]);
+
+  const handleQuizComplete = () => {
+    setQuizCompleted(true);
+    navigate('/results');
+  };
 
   const handleAnswerSelect = (index: number) => {
     if (showFeedback) return;
@@ -66,11 +75,11 @@ export default function Quiz() {
     addQuizAnswer({ questionIndex: currentQuestionIndex, selectedAnswer: finalAnswer });
     setShowFeedback(false);
     setSelectedAnswer(null);
-    setTimeLeft(QUESTION_TIME);
     
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
+      setQuizCompleted(true);
       navigate('/results');
     }
   };
@@ -112,16 +121,31 @@ export default function Quiz() {
           <span className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             Question {currentQuestionIndex + 1} of {questions.length}
           </span>
-          <div className={`px-4 py-2 rounded-lg ${timeLeft <= 10 ? 'bg-red-500' : 'bg-indigo-600'} text-white`}>
-            ⏱️ {timeLeft}s
+          <div className={`px-4 py-2 rounded-lg ${totalTimeLeft <= 60 ? 'bg-red-500' : 'bg-indigo-600'} text-white font-semibold`}>
+            ⏱️ {Math.floor(totalTimeLeft / 60)}:{(totalTimeLeft % 60).toString().padStart(2, '0')}
           </div>
         </div>
         
-        <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
           <div 
             className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
             style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
           />
+        </div>
+        
+        <div className="flex gap-1 mb-6">
+          {questions.map((_, idx) => (
+            <div
+              key={idx}
+              className={`h-2 flex-1 rounded ${
+                idx < currentQuestionIndex 
+                  ? 'bg-green-500' 
+                  : idx === currentQuestionIndex 
+                    ? 'bg-indigo-600' 
+                    : 'bg-gray-300'
+              }`}
+            />
+          ))}
         </div>
 
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6 mb-6`}>
