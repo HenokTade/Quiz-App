@@ -387,12 +387,8 @@ export default function Admin() {
         </div>
 
         {fetchError && (
-          <div className="mb-6 p-4 bg-red-100 dark:bg-red-900/40 border border-red-300 dark:border-red-700/50 text-red-700 dark:text-red-400 rounded-xl flex items-center gap-3">
-            <span>Failed to load data:</span>
-            <code className="text-sm flex-1">{fetchError}</code>
-            <button onClick={() => window.location.reload()} className="px-3 py-1 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 shrink-0">
-              Reload
-            </button>
+          <div className="mb-6 p-4 bg-red-100 dark:bg-red-900/40 border border-red-300 dark:border-red-700/50 text-red-700 dark:text-red-400 rounded-xl">
+            Failed to load data: {fetchError}
           </div>
         )}
 

@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Categories — any authenticated user can read; only admins can write
+    match /categories/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Questions — any authenticated user can read; only admins can write
+    match /questions/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Users — the user themselves or any admin can read; only the user can write their own doc
+    match /users/{uid} {
+      allow read: if request.auth != null && (
+        request.auth.uid == uid
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+      allow create: if request.auth.uid == uid;
+      allow write: if request.auth.uid == uid;
+    }
+
+    // Results — the quiz-taker or any admin can read; only the taker can create/write
+    match /results/{docId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.userId
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow delete: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow update: if request.auth.uid == resource.data.userId;
+    }
+  }
+}
