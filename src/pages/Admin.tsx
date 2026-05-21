@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
 import { useNavigate } from 'react-router-dom';
@@ -25,11 +25,33 @@ interface BulkUploadData {
   sections: BulkUploadSection[];
 }
 
+interface UserDoc {
+  id: string;
+  email: string;
+  displayName?: string;
+  role: 'student' | 'admin';
+  createdAt?: string;
+}
+
+interface QuizResultDoc {
+  id: string;
+  userId: string;
+  userEmail?: string;
+  userName?: string;
+  category: string;
+  categoryName?: string;
+  score: number;
+  totalQuestions: number;
+  date: string;
+}
+
 export default function Admin() {
   const { user, darkMode } = useStore();
   const [categories, setCategories] = useState<Category[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [activeTab, setActiveTab] = useState<'categories' | 'questions' | 'bulk'>('categories');
+  const [users, setUsers] = useState<UserDoc[]>([]);
+  const [allResults, setAllResults] = useState<QuizResultDoc[]>([]);
+  const [activeTab, setActiveTab] = useState<'stats' | 'categories' | 'questions' | 'bulk' | 'users' | 'results'>('stats');
   const [newCategory, setNewCategory] = useState('');
   const [categorySuccess, setCategorySuccess] = useState('');
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
@@ -53,6 +75,8 @@ export default function Admin() {
   const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [resultFilterUser, setResultFilterUser] = useState('');
+  const [resultFilterCategory, setResultFilterCategory] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -62,23 +86,64 @@ export default function Admin() {
     }
     fetchCategories();
     fetchQuestions();
+    fetchUsers();
+    fetchAllResults();
   }, [user]);
 
   const fetchCategories = async () => {
-    console.log('Fetching categories...');
     try {
       const snapshot = await getDocs(collection(db, 'categories'));
-      console.log('Categories fetched:', snapshot.docs.length);
       setCategories(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as { id: string; name: string }[]);
     } catch (err) {
       console.error('Error fetching categories:', err);
-      alert('Error fetching categories: ' + err);
     }
   };
 
   const fetchQuestions = async () => {
-    const snapshot = await getDocs(collection(db, 'questions'));
-    setQuestions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Question[]);
+    try {
+      const snapshot = await getDocs(collection(db, 'questions'));
+      setQuestions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Question[]);
+    } catch (err) {
+      console.error('Error fetching questions:', err);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'users'));
+      const fetchedUsers = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as UserDoc[];
+      setUsers(fetchedUsers);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    }
+  };
+
+  const fetchAllResults = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'results'));
+      const results = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as QuizResultDoc[];
+      setAllResults(results);
+    } catch (err) {
+      console.error('Error fetching results:', err);
+    }
+  };
+
+  const handleRoleChange = async (uid: string, newRole: 'student' | 'admin') => {
+    try {
+      await updateDoc(doc(db, 'users', uid), { role: newRole });
+      setUsers(prev => prev.map(u => u.id === uid ? { ...u, role: newRole } : u));
+    } catch (err) {
+      console.error('Error updating role:', err);
+    }
+  };
+
+  const handleDeleteUserResult = async (resultId: string) => {
+    try {
+      await deleteDoc(doc(db, 'results', resultId));
+      setAllResults(prev => prev.filter(r => r.id !== resultId));
+    } catch (err) {
+      console.error('Error deleting result:', err);
+    }
   };
 
   const exportToCSV = () => {
@@ -114,13 +179,17 @@ export default function Admin() {
     return matchesSearch && matchesCategory;
   });
 
+  const filteredResults = allResults.filter(r => {
+    const matchesUser = !resultFilterUser || r.userId === resultFilterUser;
+    const matchesCategory = !resultFilterCategory || r.category === resultFilterCategory;
+    return matchesUser && matchesCategory;
+  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCategory.trim()) return;
-    console.log('Adding category:', newCategory);
     try {
       const docRef = await addDoc(collection(db, 'categories'), { name: newCategory });
-      console.log('Category added with ID:', docRef.id);
       setNewCategory('');
       setCategorySuccess('Category added successfully!');
       setTimeout(() => setCategorySuccess(''), 3000);
@@ -280,39 +349,231 @@ export default function Admin() {
     return null;
   }
 
+  const totalResults = allResults.length;
+  const totalUsers = users.length;
+  const totalQuestions = questions.length;
+  const totalCategories = categories.length;
+  const totalAdmins = users.filter(u => u.role === 'admin').length;
+
+  const navBtn = (tab: typeof activeTab, label: string) => (
+    <button
+      onClick={() => setActiveTab(tab)}
+      className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+        activeTab === tab
+          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+          : darkMode
+            ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            : 'bg-white text-gray-700 hover:bg-gray-100'
+      }`}
+    >
+      {label}
+    </button>
+  );
+
   return (
     <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <div className="max-w-6xl mx-auto px-4">
-        <h1 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Admin Dashboard</h1>
-        
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={() => setActiveTab('categories')}
-            className={`px-6 py-3 rounded-lg ${activeTab === 'categories' ? 'bg-indigo-600 text-white' : darkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'}`}
-          >
-            Categories
-          </button>
-          <button
-            onClick={() => setActiveTab('questions')}
-            className={`px-6 py-3 rounded-lg ${activeTab === 'questions' ? 'bg-indigo-600 text-white' : darkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'}`}
-          >
-            Questions
-          </button>
-          <button
-            onClick={() => setActiveTab('bulk')}
-            className={`px-6 py-3 rounded-lg ${activeTab === 'bulk' ? 'bg-indigo-600 text-white' : darkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'}`}
-          >
-            Bulk Upload
-          </button>
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            Admin Dashboard
+          </h1>
+          <div className="flex gap-1 flex-wrap">
+            {navBtn('stats', 'Overview')}
+            {navBtn('users', 'Users')}
+            {navBtn('results', 'Results')}
+            {navBtn('categories', 'Categories')}
+            {navBtn('questions', 'Questions')}
+            {navBtn('bulk', 'Bulk Upload')}
+          </div>
         </div>
 
+        {/* ── Overview ── */}
+        {activeTab === 'stats' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { label: 'Total Users', value: totalUsers, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+              { label: 'Total Quizzes Taken', value: totalResults, color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' },
+              { label: 'Total Questions', value: totalQuestions, color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+              { label: 'Total Categories', value: totalCategories, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+            ].map(stat => (
+              <div
+                key={stat.label}
+                className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6 border ${stat.border} ${stat.bg}`}
+              >
+                <p className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</p>
+                <p className={`text-4xl font-bold mt-2 ${stat.color}`}>{stat.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Users ── */}
+        {activeTab === 'users' && (
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Manage Users ({totalUsers})
+              </h2>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {totalAdmins} admin{totalAdmins !== 1 ? 's' : ''}
+              </p>
+            </div>
+            {users.length === 0 ? (
+              <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>No users registered yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className={`border-b ${darkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
+                      <th className="text-left py-3 px-2 font-medium">Name</th>
+                      <th className="text-left py-3 px-2 font-medium">Email</th>
+                      <th className="text-left py-3 px-2 font-medium">Role</th>
+                      <th className="text-left py-3 px-2 font-medium">Joined</th>
+                      <th className="text-right py-3 px-2 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map(u => (
+                      <tr key={u.id} className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'} hover:${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                        <td className={`py-3 px-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {u.displayName || '—'}
+                        </td>
+                        <td className={`py-3 px-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{u.email}</td>
+                        <td className="py-3 px-2">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            u.role === 'admin'
+                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400'
+                              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
+                          }`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className={`py-3 px-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          {u.id !== user.uid && (
+                            <select
+                              value={u.role}
+                              onChange={(e) => handleRoleChange(u.id, e.target.value as 'student' | 'admin')}
+                              className={`text-xs p-1.5 rounded border ${
+                                darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'
+                              }`}
+                            >
+                              <option value="student">student</option>
+                              <option value="admin">admin</option>
+                            </select>
+                          )}
+                          {u.id === user.uid && (
+                            <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>You</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Results ── */}
+        {activeTab === 'results' && (
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                All Quiz Results ({filteredResults.length})
+              </h2>
+              <div className="flex gap-3 flex-wrap">
+                <select
+                  value={resultFilterUser}
+                  onChange={(e) => setResultFilterUser(e.target.value)}
+                  className={`text-sm p-2 rounded-lg border ${
+                    darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <option value="">All Users</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.displayName || u.email}</option>
+                  ))}
+                </select>
+                <select
+                  value={resultFilterCategory}
+                  onChange={(e) => setResultFilterCategory(e.target.value)}
+                  className={`text-sm p-2 rounded-lg border ${
+                    darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <option value="">All Categories</option>
+                  {[...new Set(allResults.map(r => r.category))].map(cat => (
+                    <option key={cat} value={cat}>
+                      {categories.find(c => c.id === cat)?.name || cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {filteredResults.length === 0 ? (
+              <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>No results found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className={`border-b ${darkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
+                      <th className="text-left py-3 px-2 font-medium">User</th>
+                      <th className="text-left py-3 px-2 font-medium">Category</th>
+                      <th className="text-left py-3 px-2 font-medium">Score</th>
+                      <th className="text-left py-3 px-2 font-medium">Date</th>
+                      <th className="text-right py-3 px-2 font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredResults.map(r => {
+                      const userDoc = users.find(u => u.id === r.userId);
+                      const catName = categories.find(c => c.id === r.category)?.name || r.category;
+                      const percentage = Math.round((r.score / r.totalQuestions) * 100);
+                      return (
+                        <tr key={r.id} className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+                          <td className={`py-3 px-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {userDoc?.displayName || userDoc?.email || r.userId?.slice(0, 8)}
+                          </td>
+                          <td className={`py-3 px-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{catName}</td>
+                          <td className="py-3 px-2">
+                            <span className={`font-semibold ${
+                              percentage >= 70 ? 'text-green-500' : percentage >= 50 ? 'text-yellow-500' : 'text-red-500'
+                            }`}>
+                              {r.score}/{r.totalQuestions} ({percentage}%)
+                            </span>
+                          </td>
+                          <td className={`py-3 px-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {new Date(r.date).toLocaleDateString()} {new Date(r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td className="py-3 px-2 text-right">
+                            <button
+                              onClick={() => handleDeleteUserResult(r.id)}
+                              className="text-red-500 hover:text-red-400 text-xs font-medium"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Categories ── */}
         {activeTab === 'categories' && (
-          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Manage Categories</h2>
               <button
                 onClick={() => { fetchCategories(); fetchQuestions(); }}
-                className="text-indigo-600 hover:underline text-sm"
+                className="text-indigo-500 hover:text-indigo-400 text-sm"
               >
                 Refresh
               </button>
@@ -330,7 +591,7 @@ export default function Admin() {
               </button>
             </form>
             {categorySuccess && (
-              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">{categorySuccess}</div>
+              <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-lg">{categorySuccess}</div>
             )}
             <div className="space-y-2">
               {categories.map(cat => (
@@ -343,15 +604,15 @@ export default function Admin() {
                         onChange={(e) => setEditCategoryName(e.target.value)}
                         className={`flex-1 p-2 border rounded ${darkMode ? 'bg-gray-600 text-white' : 'bg-white'}`}
                       />
-                      <button onClick={handleUpdateCategory} className="text-green-600 hover:underline">Save</button>
+                      <button onClick={handleUpdateCategory} className="text-green-500 hover:underline">Save</button>
                       <button onClick={handleCancelEditCategory} className="text-gray-500 hover:underline">Cancel</button>
                     </div>
                   ) : (
                     <>
                       <span className={darkMode ? 'text-white' : 'text-gray-900'}>{cat.name}</span>
                       <div className="flex gap-3">
-                        <button onClick={() => handleEditCategory(cat)} className="text-indigo-600 hover:underline">Edit</button>
-                        <button onClick={() => handleDeleteCategory(cat.id)} className="text-red-600 hover:underline">Delete</button>
+                        <button onClick={() => handleEditCategory(cat)} className="text-indigo-500 hover:underline">Edit</button>
+                        <button onClick={() => handleDeleteCategory(cat.id)} className="text-red-500 hover:underline">Delete</button>
                       </div>
                     </>
                   )}
@@ -361,8 +622,9 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ── Questions ── */}
         {activeTab === 'questions' && (
-          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
             <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Add Question</h2>
             <form onSubmit={handleAddQuestion} className="space-y-4">
               <div>
@@ -511,23 +773,24 @@ export default function Admin() {
                     <div className="flex justify-between items-start">
                       <div className={darkMode ? 'text-white' : 'text-gray-900'}>
                         <p className="font-medium">{q.question}</p>
-                        <p className="text-sm text-gray-500">{categories.find(c => c.id === q.category)?.name}</p>
-                        <p className="text-sm text-green-600">Correct: {q.options[q.correctAnswer]}</p>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{categories.find(c => c.id === q.category)?.name}</p>
+                        <p className="text-sm text-green-500">Correct: {q.options[q.correctAnswer]}</p>
                       </div>
-                      <div className="flex gap-3">
-                        <button onClick={() => handleEditQuestion(q)} className="text-indigo-600 hover:underline">Edit</button>
-                        <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-600 hover:underline">Delete</button>
+                      <div className="flex gap-3 shrink-0">
+                        <button onClick={() => handleEditQuestion(q)} className="text-indigo-500 hover:underline">Edit</button>
+                        <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-500 hover:underline">Delete</button>
                       </div>
                     </div>
                   )}
                 </div>
               ))}
             </div>
-</div>
-          )}
+          </div>
+        )}
 
+        {/* ── Bulk Upload ── */}
         {activeTab === 'bulk' && (
-          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
             <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Bulk Upload Questions (JSON)</h2>
             
             <div className="mb-4">
@@ -572,16 +835,16 @@ export default function Admin() {
             </div>
 
             {bulkError && (
-              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">{bulkError}</div>
+              <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 rounded-lg">{bulkError}</div>
             )}
             {bulkSuccess && (
-              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">{bulkSuccess}</div>
+              <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-lg">{bulkSuccess}</div>
             )}
 
             <button
               onClick={handleBulkUpload}
               disabled={isUploading}
-              className={`bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+              className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUploading ? 'Uploading...' : 'Upload Questions'}
             </button>
