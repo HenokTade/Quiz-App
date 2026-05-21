@@ -78,55 +78,54 @@ export default function Admin() {
   const [resultFilterUser, setResultFilterUser] = useState('');
   const [resultFilterCategory, setResultFilterCategory] = useState('');
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
+
+  const fetchCategories = async () => {
+    const snapshot = await getDocs(collection(db, 'categories'));
+    setCategories(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as { id: string; name: string }[]);
+  };
+
+  const fetchQuestions = async () => {
+    const snapshot = await getDocs(collection(db, 'questions'));
+    setQuestions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Question[]);
+  };
+
+  const fetchUsers = async () => {
+    const snapshot = await getDocs(collection(db, 'users'));
+    const fetchedUsers = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as UserDoc[];
+    setUsers(fetchedUsers);
+  };
+
+  const fetchAllResults = async () => {
+    const snapshot = await getDocs(collection(db, 'results'));
+    const results = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as QuizResultDoc[];
+    setAllResults(results);
+  };
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       navigate('/home');
       return;
     }
-    fetchCategories();
-    fetchQuestions();
-    fetchUsers();
-    fetchAllResults();
+    const load = async () => {
+      setLoading(true);
+      setFetchError('');
+      try {
+        await Promise.all([
+          fetchCategories(),
+          fetchQuestions(),
+          fetchUsers(),
+          fetchAllResults(),
+        ]);
+      } catch (err) {
+        setFetchError(err instanceof Error ? err.message : 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, [user]);
-
-  const fetchCategories = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, 'categories'));
-      setCategories(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as { id: string; name: string }[]);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-    }
-  };
-
-  const fetchQuestions = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, 'questions'));
-      setQuestions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Question[]);
-    } catch (err) {
-      console.error('Error fetching questions:', err);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, 'users'));
-      const fetchedUsers = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as UserDoc[];
-      setUsers(fetchedUsers);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-    }
-  };
-
-  const fetchAllResults = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, 'results'));
-      const results = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as QuizResultDoc[];
-      setAllResults(results);
-    } catch (err) {
-      console.error('Error fetching results:', err);
-    }
-  };
 
   const handleRoleChange = async (uid: string, newRole: 'student' | 'admin') => {
     try {
@@ -387,24 +386,42 @@ export default function Admin() {
           </div>
         </div>
 
+        {fetchError && (
+          <div className="mb-6 p-4 bg-red-100 dark:bg-red-900/40 border border-red-300 dark:border-red-700/50 text-red-700 dark:text-red-400 rounded-xl flex items-center gap-3">
+            <span>Failed to load data:</span>
+            <code className="text-sm flex-1">{fetchError}</code>
+            <button onClick={() => window.location.reload()} className="px-3 py-1 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 shrink-0">
+              Reload
+            </button>
+          </div>
+        )}
+
         {/* ── Overview ── */}
         {activeTab === 'stats' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { label: 'Total Users', value: totalUsers, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-              { label: 'Total Quizzes Taken', value: totalResults, color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' },
-              { label: 'Total Questions', value: totalQuestions, color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
-              { label: 'Total Categories', value: totalCategories, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
-            ].map(stat => (
-              <div
-                key={stat.label}
-                className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6 border ${stat.border} ${stat.bg}`}
-              >
-                <p className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</p>
-                <p className={`text-4xl font-bold mt-2 ${stat.color}`}>{stat.value}</p>
+          <>
+            {loading ? (
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-8 text-center`}>
+                <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Loading dashboard data...</p>
               </div>
-            ))}
-          </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                  { label: 'Total Users', value: totalUsers, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+                  { label: 'Total Quizzes Taken', value: totalResults, color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' },
+                  { label: 'Total Questions', value: totalQuestions, color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+                  { label: 'Total Categories', value: totalCategories, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+                ].map(stat => (
+                  <div
+                    key={stat.label}
+                    className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6 border ${stat.border} ${stat.bg}`}
+                  >
+                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</p>
+                    <p className={`text-4xl font-bold mt-2 ${stat.color}`}>{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {/* ── Users ── */}
