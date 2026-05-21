@@ -191,7 +191,7 @@ export default function QuestionsManager() {
     <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-6xl mx-auto px-4">
         <h1 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Questions Manager</h1>
-        <div className="flex gap-4 mb-6">
+        <div className="flex gap-4 mb-6 flex-wrap">
           {navBtn('categories', 'Categories')}
           {navBtn('questions', 'Questions')}
           {navBtn('bulk', 'Bulk Upload')}
@@ -203,7 +203,7 @@ export default function QuestionsManager() {
               <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Manage Categories</h2>
               <button onClick={() => { fetchCategories(); fetchQuestions(); }} className="text-indigo-500 hover:text-indigo-400 text-sm">Refresh</button>
             </div>
-            <form onSubmit={handleAddCategory} className="flex gap-4 mb-6">
+            <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-4 mb-6">
               <input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="Category name"
                 className={`flex-1 p-3 border rounded-lg ${iCls}`} />
               <button type="submit" className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">Add</button>
@@ -257,7 +257,7 @@ export default function QuestionsManager() {
                     className={`w-full p-3 border rounded-lg ${iCls}`} />
                 </div>
               ))}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Correct Answer</label>
                   <select value={newQuestion.correctAnswer} onChange={e => setNewQuestion({ ...newQuestion, correctAnswer: parseInt(e.target.value) })}
