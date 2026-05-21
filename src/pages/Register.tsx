@@ -73,7 +73,7 @@ export default function Register() {
         role,
         displayName: name
       });
-      navigate('/home');
+      navigate(role === 'admin' ? '/dashboard' : '/home');
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Google sign-up failed';
       if (!errMsg.includes('popup-closed-by-user')) {

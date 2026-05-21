@@ -58,8 +58,8 @@ function AppContent() {
         <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/quiz/:categoryId" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
         <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
-        <Route path="/admin" element={<Navigate to="/dashboard" />} />
         <Route path="/dashboard" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
+        <Route path="/admin" element={<Navigate to="/dashboard" />} />
         <Route path="/" element={<Navigate to="/login" />} />
       </Routes>
     </div>

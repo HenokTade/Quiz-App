@@ -22,13 +22,14 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
       const userData = userDoc.data();
+      const role = userData?.role || 'student';
       setUser({
         uid: userCredential.user.uid,
         email: userCredential.user.email!,
-        role: userData?.role || 'student',
+        role,
         displayName: userData?.displayName
       });
-      navigate('/home');
+      navigate(role === 'admin' ? '/dashboard' : '/home');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -69,7 +70,7 @@ export default function Login() {
         role,
         displayName
       });
-      navigate('/home');
+      navigate(role === 'admin' ? '/dashboard' : '/home');
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Google sign-in failed';
       if (!errMsg.includes('popup-closed-by-user')) {
