@@ -15,6 +15,7 @@ interface QuizResult {
 interface HighScore {
   category: string;
   bestScore: number;
+  totalQuestions: number;
   bestPercentage: number;
   attempts: number;
 }
@@ -50,8 +51,7 @@ export default function StudentDashboard() {
     try {
       const q = query(
         collection(db, 'results'),
-        where('userId', '==', user.uid),
-        orderBy('date', 'desc')
+        where('userId', '==', user.uid)
       );
       const snapshot = await getDocs(q);
       const resultsData: QuizResult[] = snapshot.docs.map(doc => ({
@@ -61,21 +61,28 @@ export default function StudentDashboard() {
         totalQuestions: doc.data().totalQuestions,
         date: doc.data().date
       }));
+      resultsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setResults(resultsData);
 
-      const scoresByCategory: { [key: string]: { best: number; total: number; attempts: number } } = {};
+      const scoresByCategory: { [key: string]: { best: number; total: number; totalQuestions: number; attempts: number } } = {};
       resultsData.forEach(r => {
         const percentage = Math.round((r.score / r.totalQuestions) * 100);
-        if (!scoresByCategory[r.category] || percentage > scoresByCategory[r.category].best) {
-          scoresByCategory[r.category] = { best: percentage, total: r.score, attempts: 1 };
+        if (!scoresByCategory[r.category]) {
+          scoresByCategory[r.category] = { best: percentage, total: r.score, totalQuestions: r.totalQuestions, attempts: 1 };
         } else {
           scoresByCategory[r.category].attempts++;
+          if (percentage > scoresByCategory[r.category].best) {
+            scoresByCategory[r.category].best = percentage;
+            scoresByCategory[r.category].total = r.score;
+            scoresByCategory[r.category].totalQuestions = r.totalQuestions;
+          }
         }
       });
 
       const highScoresData: HighScore[] = Object.entries(scoresByCategory).map(([cat, data]) => ({
         category: cat,
         bestScore: data.total,
+        totalQuestions: data.totalQuestions,
         bestPercentage: data.best,
         attempts: data.attempts
       }));
@@ -166,7 +173,7 @@ export default function StudentDashboard() {
                             {hs.bestPercentage}%
                           </p>
                           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {hs.bestScore}/{highScores.find(h => h.category === hs.category)?.bestScore || hs.bestScore}
+                            Score: {hs.bestScore}/{hs.totalQuestions}
                           </p>
                         </div>
                       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -8,6 +8,7 @@ export default function Results() {
   const { currentQuiz, quizAnswers, user, darkMode, resetQuiz, currentCategoryName } = useStore();
   const [score, setScore] = useState(0);
   const navigate = useNavigate();
+  const savedRef = useRef(false);
 
   useEffect(() => {
     if (currentQuiz.length === 0) {
@@ -25,22 +26,30 @@ export default function Results() {
     setScore(correct);
 
     const saveResult = async () => {
-    if (user) {
-      await addDoc(collection(db, 'results'), {
-        userId: user.uid,
-        category: currentCategoryName || currentQuiz[0]?.category || 'unknown',
-        categoryId: currentQuiz[0]?.category || '',
-        score: correct,
-        totalQuestions: currentQuiz.length,
-        date: new Date().toISOString(),
-        answers: quizAnswers.map(a => ({
-          questionIndex: a.questionIndex,
-          selectedAnswer: a.selectedAnswer,
-          isCorrect: currentQuiz[a.questionIndex]?.correctAnswer === a.selectedAnswer
-        }))
-      });
-    }
-  };
+      if (savedRef.current) return;
+      savedRef.current = true;
+
+      if (user) {
+        try {
+          await addDoc(collection(db, 'results'), {
+            userId: user.uid,
+            category: currentCategoryName || currentQuiz[0]?.category || 'unknown',
+            categoryId: currentQuiz[0]?.category || '',
+            score: correct,
+            totalQuestions: currentQuiz.length,
+            date: new Date().toISOString(),
+            answers: quizAnswers.map(a => ({
+              questionIndex: a.questionIndex,
+              selectedAnswer: a.selectedAnswer,
+              isCorrect: currentQuiz[a.questionIndex]?.correctAnswer === a.selectedAnswer
+            }))
+          });
+        } catch (error) {
+          console.error("Error saving result:", error);
+          savedRef.current = false;
+        }
+      }
+    };
     saveResult();
   }, []);
 
@@ -79,11 +88,11 @@ export default function Results() {
                   <p className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     {index + 1}. {question.question}
                   </p>
-                  <p className={isCorrect ? 'text-green-600' : 'text-red-600'}>
+                  <p className={isCorrect ? 'text-green-400' : 'text-red-400'}>
                     {isCorrect ? '✓ Correct' : `✗ Your answer: ${question.options[answer?.selectedAnswer ?? 0] || 'No answer'}`}
                   </p>
                   {!isCorrect && (
-                    <p className="text-green-600 mt-1">
+                    <p className="text-green-400 mt-1">
                       Correct: {question.options[question.correctAnswer]}
                     </p>
                   )}

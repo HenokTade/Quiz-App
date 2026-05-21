@@ -11,14 +11,13 @@ const MAX_QUESTIONS = 10;
 export default function Quiz() {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [shuffledOptions, setShuffledOptions] = useState<string[][]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [totalTimeLeft, setTotalTimeLeft] = useState(TOTAL_QUIZ_TIME);
   const [timerWarning, setTimerWarning] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
-  const { darkMode, startQuiz, addQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory } = useStore();
+  const { darkMode, startQuiz, addQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,9 +36,19 @@ export default function Quiz() {
         })) as Question[];
         
         const shuffledQuestions = [...fetchedQuestions].sort(() => Math.random() - 0.5).slice(0, MAX_QUESTIONS);
-        const shuffledOpts = shuffledQuestions.map(q => [...q.options].sort(() => Math.random() - 0.5));
-        setQuestions(shuffledQuestions);
-        setShuffledOptions(shuffledOpts);
+        const shuffledQuestionsWithOptions = shuffledQuestions.map((q) => {
+          const correctOptionText = q.options[q.correctAnswer];
+          const shuffledOpts = [...q.options].sort(() => Math.random() - 0.5);
+          const newCorrectAnswerIndex = shuffledOpts.indexOf(correctOptionText);
+          return {
+            ...q,
+            options: shuffledOpts,
+            correctAnswer: newCorrectAnswerIndex >= 0 ? newCorrectAnswerIndex : 0
+          };
+        });
+
+        setQuestions(shuffledQuestionsWithOptions);
+        setCurrentQuiz(shuffledQuestionsWithOptions);
         startQuiz();
       } catch (error) {
         console.error('Error fetching questions:', error);
@@ -122,8 +131,8 @@ export default function Quiz() {
   }
 
   const currentQuestion = questions[currentQuestionIndex];
-  const currentOptions = shuffledOptions[currentQuestionIndex] || [];
-  const correctAnswerIndex = currentQuestion ? currentOptions.indexOf(currentQuestion.options[currentQuestion.correctAnswer]) : -1;
+  const currentOptions = currentQuestion?.options || [];
+  const correctAnswerIndex = currentQuestion?.correctAnswer ?? -1;
   const isCorrect = selectedAnswer === correctAnswerIndex;
 
   return (
@@ -176,15 +185,15 @@ export default function Quiz() {
               let buttonClass = `w-full p-4 text-left rounded-lg border-2 transition-all `;
               if (showFeedback) {
                 if (index === correctAnswerIndex) {
-                  buttonClass += 'bg-green-500 border-green-500 text-white';
+                  buttonClass += 'bg-green-600 border-green-600 text-white';
                 } else if (index === selectedAnswer && !isCorrect) {
-                  buttonClass += 'bg-red-500 border-red-500 text-white';
+                  buttonClass += 'bg-red-600 border-red-600 text-white';
                 } else {
-                  buttonClass += darkMode ? 'bg-gray-700 border-gray-600 text-gray-400' : 'bg-gray-100 border-gray-200 text-gray-500';
+                  buttonClass += darkMode ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-500';
                 }
               } else {
                 buttonClass += selectedAnswer === index 
-                  ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                  ? darkMode ? 'border-indigo-500 bg-indigo-900/50 text-indigo-300' : 'border-indigo-600 bg-indigo-50 text-indigo-700'
                   : darkMode ? 'bg-gray-700 border-gray-600 text-white hover:border-gray-500' : 'bg-white border-gray-300 text-gray-700 hover:border-indigo-400';
               }
               
@@ -202,8 +211,8 @@ export default function Quiz() {
           </div>
 
           {showFeedback && (
-            <div className={`mt-6 p-4 rounded-lg ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`}>
-              <p className={`font-semibold ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+            <div className={`mt-6 p-4 rounded-lg ${isCorrect ? (darkMode ? 'bg-green-900/40 border border-green-700/50' : 'bg-green-100') : (darkMode ? 'bg-red-900/40 border border-red-700/50' : 'bg-red-100')}`}>
+              <p className={`font-semibold ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
                 {isCorrect ? '✓ Correct!' : '✗ Incorrect'}
               </p>
               <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
