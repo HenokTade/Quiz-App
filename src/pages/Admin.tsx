@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useStore } from '../store/useStore';
 import { useNavigate } from 'react-router-dom';
@@ -45,13 +45,29 @@ export default function Admin() {
   }, [user]);
 
   const handleRoleChange = async (uid: string, newRole: 'student' | 'admin') => {
-    await updateDoc(doc(db, 'users', uid), { role: newRole });
-    setUsers(prev => prev.map(u => u.id === uid ? { ...u, role: newRole } : u));
+    try {
+      await updateDoc(doc(db, 'users', uid), { role: newRole });
+      setUsers(prev => prev.map(u => u.id === uid ? { ...u, role: newRole } : u));
+    } catch (err) {
+      console.error('Failed to update role:', err);
+      alert('Failed to update role. Check console for details.');
+    }
   };
 
   const handleDeleteUserResult = async (resultId: string) => {
     await deleteDoc(doc(db, 'results', resultId));
     setAllResults(prev => prev.filter(r => r.id !== resultId));
+  };
+
+  const handleDeleteUser = async (uid: string) => {
+    if (!confirm('Delete this user and all their quiz results?')) return;
+    const resultsQuery = query(collection(db, 'results'), where('userId', '==', uid));
+    const resultsSnap = await getDocs(resultsQuery);
+    const deletePromises = resultsSnap.docs.map(d => deleteDoc(doc(db, 'results', d.id)));
+    await Promise.all(deletePromises);
+    await deleteDoc(doc(db, 'users', uid));
+    setUsers(prev => prev.filter(u => u.id !== uid));
+    setAllResults(prev => prev.filter(r => r.userId !== uid));
   };
 
   const filteredResults = allResults.filter(r => {
@@ -153,11 +169,14 @@ export default function Admin() {
                         </td>
                         <td className="py-3 px-2 text-right">
                           {u.id !== user.uid ? (
-                            <select value={u.role} onChange={e => handleRoleChange(u.id, e.target.value as 'student' | 'admin')}
-                              className={`text-xs p-1.5 rounded border ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}>
-                              <option value="student">student</option>
-                              <option value="admin">admin</option>
-                            </select>
+                            <div className="flex items-center justify-end gap-2">
+                              <select key={u.role} value={u.role} onChange={e => handleRoleChange(u.id, e.target.value as 'student' | 'admin')}
+                                className={`text-xs p-1.5 rounded border ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}>
+                                <option value="student">student</option>
+                                <option value="admin">admin</option>
+                              </select>
+                              <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:text-red-400 text-xs font-medium">Delete</button>
+                            </div>
                           ) : (
                             <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>You</span>
                           )}

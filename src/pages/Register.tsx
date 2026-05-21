@@ -55,6 +55,11 @@ export default function Register() {
       let name = firebaseUser.displayName || '';
 
       if (!userDocSnap.exists()) {
+        const emailName = firebaseUser.email?.split('@')[0] || '';
+        const formattedName = emailName
+          .replace(/[._]/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        name = formattedName;
         await setDoc(userDocRef, {
           email: firebaseUser.email,
           displayName: name,

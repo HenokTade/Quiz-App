@@ -28,11 +28,15 @@ function AppContent() {
       if (firebaseUser) {
         const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
         const userData = userDoc.data();
+        const emailName = firebaseUser.email?.split('@')[0] || '';
+        const fallbackName = emailName
+          .replace(/[._]/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase());
         setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email!,
           role: userData?.role || 'student',
-          displayName: userData?.displayName
+          displayName: userData?.displayName || fallbackName
         } as User);
       } else {
         setUser(null);

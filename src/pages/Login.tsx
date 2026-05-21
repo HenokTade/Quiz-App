@@ -51,7 +51,11 @@ export default function Login() {
       let displayName = firebaseUser.displayName || '';
 
       if (!userDocSnap.exists()) {
-        // First time Google sign-in: provision a new user
+        const emailName = firebaseUser.email?.split('@')[0] || '';
+        const formattedName = emailName
+          .replace(/[._]/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        displayName = formattedName;
         await setDoc(userDocRef, {
           email: firebaseUser.email,
           displayName,
