@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { useStore, Question } from '../store/useStore';
+import { useStore, Question, QuizSettings, RetakeMode, FeedbackMode } from '../store/useStore';
 
-interface Category { id: string; name: string }
+interface Category { id: string; name: string; quizTime?: number; retakeMode?: RetakeMode; retakeCooldown?: number; feedbackMode?: FeedbackMode }
 
 interface BulkUploadSection {
   section_title: string;
@@ -16,7 +16,7 @@ interface BulkUploadData { quiz_title?: string; sections: BulkUploadSection[] }
 
 export default function QuestionsManager() {
   const { darkMode } = useStore();
-  const [activeTab, setActiveTab] = useState<'categories' | 'questions' | 'bulk'>('categories');
+  const [activeTab, setActiveTab] = useState<'categories' | 'questions' | 'bulk' | 'settings'>('categories');
   const [categories, setCategories] = useState<Category[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [newCategory, setNewCategory] = useState('');
@@ -36,6 +36,13 @@ export default function QuestionsManager() {
   const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [settingsCategory, setSettingsCategory] = useState('');
+  const [quizTime, setQuizTime] = useState(5);
+  const [retakeMode, setRetakeMode] = useState<RetakeMode>('unlimited');
+  const [retakeCooldown, setRetakeCooldown] = useState(0);
+  const [feedbackMode, setFeedbackMode] = useState<FeedbackMode>('after_each');
+  const [settingsSuccess, setSettingsSuccess] = useState('');
+  const [settingsError, setSettingsError] = useState('');
 
   useEffect(() => { fetchCategories(); fetchQuestions(); }, []);
 
@@ -58,7 +65,13 @@ export default function QuestionsManager() {
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCategory.trim()) return;
-    await addDoc(collection(db, 'categories'), { name: newCategory });
+    await addDoc(collection(db, 'categories'), {
+      name: newCategory,
+      quizTime: 5,
+      retakeMode: 'unlimited',
+      retakeCooldown: 0,
+      feedbackMode: 'after_each'
+    });
     setNewCategory('');
     setCategorySuccess('Category added successfully!');
     setTimeout(() => setCategorySuccess(''), 3000);
@@ -176,6 +189,35 @@ export default function QuestionsManager() {
     } finally { setIsUploading(false); }
   };
 
+  const handleSettingsCategoryChange = (catId: string) => {
+    setSettingsCategory(catId);
+    const cat = categories.find(c => c.id === catId);
+    if (cat) {
+      setQuizTime(cat.quizTime ?? 5);
+      setRetakeMode(cat.retakeMode ?? 'unlimited');
+      setRetakeCooldown(cat.retakeCooldown ?? 0);
+      setFeedbackMode(cat.feedbackMode ?? 'after_each');
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSettingsError(''); setSettingsSuccess('');
+    if (!settingsCategory) { setSettingsError('Please select a category'); return; }
+    try {
+      await updateDoc(doc(db, 'categories', settingsCategory), {
+        quizTime: quizTime,
+        retakeMode: retakeMode,
+        retakeCooldown: retakeMode === 'cooldown' ? retakeCooldown : 0,
+        feedbackMode: feedbackMode
+      });
+      setSettingsSuccess('Settings saved successfully!');
+      setTimeout(() => setSettingsSuccess(''), 3000);
+      fetchCategories();
+    } catch (e) {
+      setSettingsError(`Error: ${e instanceof Error ? e.message : 'Unknown'}`);
+    }
+  };
+
   const navBtn = (tab: typeof activeTab, label: string) => (
     <button onClick={() => setActiveTab(tab)}
       className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
@@ -195,6 +237,7 @@ export default function QuestionsManager() {
           {navBtn('categories', 'Categories')}
           {navBtn('questions', 'Questions')}
           {navBtn('bulk', 'Bulk Upload')}
+          {navBtn('settings', 'Settings')}
         </div>
 
         {activeTab === 'categories' && (
@@ -376,6 +419,104 @@ export default function QuestionsManager() {
   ]
 }`}</pre>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
+            <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Quiz Settings</h2>
+            <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Configure quiz time limit, retake rule, and feedback display mode per category.
+            </p>
+
+            <div className="mb-6">
+              <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Category</label>
+              <select value={settingsCategory} onChange={e => handleSettingsCategoryChange(e.target.value)}
+                className={`w-full p-3 border rounded-lg ${iCls}`}>
+                <option value="">Select a category</option>
+                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+              </select>
+            </div>
+
+            {settingsCategory && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Quiz Time Limit (minutes)
+                    </label>
+                    <input type="number" min={1} max={180} value={quizTime}
+                      onChange={e => setQuizTime(Math.max(1, parseInt(e.target.value) || 1))}
+                      className={`w-full p-3 border rounded-lg ${iCls}`} />
+                    <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                      Total time allowed for the entire quiz
+                    </p>
+                  </div>
+                  <div>
+                    <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Retake Rule
+                    </label>
+                    <select value={retakeMode} onChange={e => setRetakeMode(e.target.value as RetakeMode)}
+                      className={`w-full p-3 border rounded-lg ${iCls}`}>
+                      <option value="unlimited">Unlimited — retake anytime</option>
+                      <option value="cooldown">Time-based — wait X hours</option>
+                      <option value="once">One time only — can't retake</option>
+                    </select>
+                    {retakeMode === 'cooldown' && (
+                      <div className="mt-3">
+                        <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Cooldown (hours)
+                        </label>
+                        <input type="number" min={1} max={720} value={retakeCooldown || 1}
+                          onChange={e => setRetakeCooldown(Math.max(1, parseInt(e.target.value) || 1))}
+                          className={`w-full p-3 border rounded-lg ${iCls}`} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Feedback Display
+                  </label>
+                  <div className="space-y-2">
+                    {[
+                      { value: 'after_each' as FeedbackMode, label: 'After each question', desc: 'Show correct/incorrect and explanation after each answer' },
+                      { value: 'at_end' as FeedbackMode, label: 'At the end', desc: 'Show all answers and explanations on the results page' },
+                      { value: 'none' as FeedbackMode, label: 'Not shown', desc: 'No feedback displayed at all — only total score' },
+                    ].map(opt => (
+                      <label key={opt.value}
+                        className={`flex items-center gap-3 p-4 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} ${feedbackMode === opt.value ? (darkMode ? 'ring-2 ring-indigo-500' : 'ring-2 ring-indigo-400') : ''}`}>
+                        <input type="radio" name="feedbackMode" value={opt.value}
+                          checked={feedbackMode === opt.value}
+                          onChange={e => e.target.checked && setFeedbackMode(opt.value)}
+                          className="w-4 h-4 text-indigo-600 focus:ring-indigo-500" />
+                        <div>
+                          <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {opt.label}
+                          </span>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {opt.desc}
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {settingsError && (
+                  <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 rounded-lg">{settingsError}</div>
+                )}
+                {settingsSuccess && (
+                  <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-lg">{settingsSuccess}</div>
+                )}
+
+                <button onClick={handleSaveSettings}
+                  className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
+                  Save Settings
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
