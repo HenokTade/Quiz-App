@@ -1,5 +1,15 @@
 import { create } from 'zustand';
 
+export type RetakeMode = 'unlimited' | 'cooldown' | 'once';
+export type FeedbackMode = 'after_each' | 'at_end' | 'none';
+
+export interface QuizSettings {
+  quizTime: number;
+  retakeMode: RetakeMode;
+  retakeCooldown: number;
+  feedbackMode: FeedbackMode;
+}
+
 export interface Question {
   id: string;
   question: string;
@@ -35,6 +45,7 @@ interface AppState {
   quizStartTime: number;
   currentCategoryId: string;
   currentCategoryName: string;
+  feedbackMode: FeedbackMode;
   setUser: (user: User | null) => void;
   setDarkMode: (dark: boolean) => void;
   setCurrentQuiz: (questions: Question[]) => void;
@@ -43,6 +54,7 @@ interface AppState {
   startQuiz: () => void;
   resetQuiz: () => void;
   setCurrentCategory: (id: string, name: string) => void;
+  setFeedbackMode: (value: FeedbackMode) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -54,6 +66,7 @@ export const useStore = create<AppState>((set) => ({
   quizStartTime: 0,
   currentCategoryId: '',
   currentCategoryName: '',
+  feedbackMode: 'after_each',
   setUser: (user) => set({ user }),
   setDarkMode: (darkMode) => set({ darkMode }),
   setCurrentQuiz: (currentQuiz) => set({ currentQuiz }),
@@ -62,6 +75,7 @@ export const useStore = create<AppState>((set) => ({
     quizAnswers: [...state.quizAnswers, answer]
   })),
   startQuiz: () => set({ quizStartTime: Date.now(), currentQuestionIndex: 0, quizAnswers: [] }),
-  resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, currentCategoryId: '', currentCategoryName: '' }),
+  resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each' }),
   setCurrentCategory: (id, name) => set({ currentCategoryId: id, currentCategoryName: name }),
+  setFeedbackMode: (value) => set({ feedbackMode: value }),
 }));
