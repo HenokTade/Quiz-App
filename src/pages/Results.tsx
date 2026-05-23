@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { useStore } from '../store/useStore';
 
 export default function Results() {
-  const { currentQuiz, quizAnswers, user, darkMode, resetQuiz, currentCategoryName } = useStore();
+  const { currentQuiz, quizAnswers, user, darkMode, resetQuiz, currentCategoryName, feedbackMode } = useStore();
   const [score, setScore] = useState(0);
   const navigate = useNavigate();
   const savedRef = useRef(false);
@@ -68,41 +68,47 @@ export default function Results() {
             Quiz Complete!
           </h1>
           
-          <div className="text-6xl font-bold mb-4">
-            <span className={percentage >= 70 ? 'text-green-500' : percentage >= 50 ? 'text-yellow-500' : 'text-red-500'}>
-              {percentage}%
-            </span>
-          </div>
-          
-          <p className={`text-xl mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            You scored {score} out of {currentQuiz.length}
-          </p>
+          {feedbackMode !== 'none' && (
+            <>
+              <div className="text-6xl font-bold mb-4">
+                <span className={percentage >= 70 ? 'text-green-500' : percentage >= 50 ? 'text-yellow-500' : 'text-red-500'}>
+                  {percentage}%
+                </span>
+              </div>
+              <p className={`text-xl mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                You scored {score} out of {currentQuiz.length}
+              </p>
+            </>
+          )}
 
-          <div className="text-left space-y-4 mb-8">
-            <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Review Answers:</h2>
-            {currentQuiz.map((question, index) => {
-              const answer = quizAnswers.find(a => a.questionIndex === index);
-              const isCorrect = answer?.selectedAnswer === question.correctAnswer;
-              return (
-                <div key={index} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <p className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {index + 1}. {question.question}
-                  </p>
-                  <p className={isCorrect ? 'text-green-400' : 'text-red-400'}>
-                    {isCorrect ? '✓ Correct' : `✗ Your answer: ${question.options[answer?.selectedAnswer ?? 0] || 'No answer'}`}
-                  </p>
-                  {!isCorrect && (
-                    <p className="text-green-400 mt-1">
-                      Correct: {question.options[question.correctAnswer]}
+          {feedbackMode === 'at_end' && (
+            <div className="text-left space-y-4 mb-8">
+              <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Review Answers:</h2>
+              {currentQuiz.map((question, index) => {
+                const answer = quizAnswers.find(a => a.questionIndex === index);
+                const notAnswered = !answer || answer.selectedAnswer === -1;
+                const isCorrect = !notAnswered && answer!.selectedAnswer === question.correctAnswer;
+                return (
+                  <div key={index} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <p className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {index + 1}. {question.question}
                     </p>
-                  )}
-                  <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    💡 {question.explanation}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+                    <p className={notAnswered ? 'text-gray-500' : (isCorrect ? 'text-green-400' : 'text-red-400')}>
+                      {notAnswered ? '— Not answered' : (isCorrect ? '✓ Correct' : `✗ Your answer: ${question.options[answer!.selectedAnswer]}`)}
+                    </p>
+                    {!isCorrect && !notAnswered && (
+                      <p className="text-green-400 mt-1">
+                        Correct: {question.options[question.correctAnswer]}
+                      </p>
+                    )}
+                    <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      💡 {question.explanation}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           <button
             onClick={handleRetake}
