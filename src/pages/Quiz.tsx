@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
 import { QuestionSkeleton, Skeleton } from '../components/Skeleton';
 
-const TOTAL_QUIZ_TIME = 300;
 const MAX_QUESTIONS = 10;
 
 export default function Quiz() {
@@ -14,27 +13,88 @@ export default function Quiz() {
   const [loading, setLoading] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [totalTimeLeft, setTotalTimeLeft] = useState(TOTAL_QUIZ_TIME);
-  const [timerWarning, setTimerWarning] = useState(false);
+  const [totalTimeLeft, setTotalTimeLeft] = useState(300);
+  const [initialTime, setInitialTime] = useState(300);
+  const [timerNotice, setTimerNotice] = useState('');
+  const [criticalTimer, setCriticalTimer] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
-  const { darkMode, startQuiz, addQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz } = useStore();
+  const [cooldownBlocked, setCooldownBlocked] = useState(false);
+  const [cooldownMessage, setCooldownMessage] = useState('');
+  const { darkMode, user, startQuiz, addQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchQuestions = async () => {
+    const fetchData = async () => {
       try {
-        const categoryDoc = await getDocs(query(collection(db, 'categories')));
-        const categoryData = categoryDoc.docs.find(d => d.id === categoryId);
-        const categoryName = categoryData?.data().name || 'Unknown';
-        
+        const categoryDoc = await getDoc(doc(db, 'categories', categoryId!));
+        if (!categoryDoc.exists()) {
+          navigate('/home');
+          return;
+        }
+        const catData = categoryDoc.data();
+        const categoryName = catData.name || 'Unknown';
+        const settings = {
+          quizTime: catData.quizTime ?? 5,
+          retakeMode: catData.retakeMode ?? 'unlimited',
+          retakeCooldown: catData.retakeCooldown ?? 0,
+          feedbackMode: catData.feedbackMode ?? 'after_each',
+        };
+
         setCurrentCategory(categoryId!, categoryName);
-        
+        setFeedbackMode(settings.feedbackMode);
+
+        const totalTimeSeconds = settings.quizTime * 60;
+        setTotalTimeLeft(totalTimeSeconds);
+        setInitialTime(totalTimeSeconds);
+
+        if (user && settings.retakeMode !== 'unlimited') {
+          const resultsQuery = query(
+            collection(db, 'results'),
+            where('userId', '==', user.uid),
+            where('categoryId', '==', categoryId)
+          );
+          const resultsSnap = await getDocs(resultsQuery);
+
+          if (!resultsSnap.empty) {
+            if (settings.retakeMode === 'once') {
+              setCooldownBlocked(true);
+              setCooldownMessage('This quiz can only be taken once.');
+              setLoading(false);
+              return;
+            }
+
+            if (settings.retakeMode === 'cooldown' && settings.retakeCooldown > 0) {
+              let lastTimestamp = 0;
+              for (const d of resultsSnap.docs) {
+                const ts = new Date(d.data().date).getTime();
+                if (ts > lastTimestamp) lastTimestamp = ts;
+              }
+              const lastDate = lastTimestamp > 0 ? new Date(lastTimestamp) : null;
+              if (lastDate) {
+                const cooldownMs = settings.retakeCooldown * 60 * 60 * 1000;
+                const availableDate = new Date(lastDate.getTime() + cooldownMs);
+                if (availableDate > new Date()) {
+                  const hoursLeft = Math.ceil((availableDate.getTime() - Date.now()) / (60 * 60 * 1000));
+                  setCooldownBlocked(true);
+                  setCooldownMessage(
+                    hoursLeft >= 1
+                      ? `You can retake this quiz in approximately ${hoursLeft} hour${hoursLeft > 1 ? 's' : ''}`
+                      : 'You can retake this quiz in less than an hour'
+                  );
+                  setLoading(false);
+                  return;
+                }
+              }
+            }
+          }
+        }
+
         const questionsSnapshot = await getDocs(query(collection(db, 'questions'), where('category', '==', categoryId)));
         const fetchedQuestions: Question[] = questionsSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data()
         })) as Question[];
-        
+
         const shuffledQuestions = [...fetchedQuestions].sort(() => Math.random() - 0.5).slice(0, MAX_QUESTIONS);
         const shuffledQuestionsWithOptions = shuffledQuestions.map((q) => {
           const correctOptionText = q.options[q.correctAnswer];
@@ -56,8 +116,8 @@ export default function Quiz() {
         setLoading(false);
       }
     };
-    fetchQuestions();
-  }, [categoryId]);
+    fetchData();
+  }, [categoryId, user]);
 
   useEffect(() => {
     if (showFeedback || quizCompleted || questions.length === 0) return;
@@ -74,12 +134,34 @@ export default function Quiz() {
   }, [showFeedback, quizCompleted, currentQuestionIndex, questions.length]);
 
   useEffect(() => {
-    if (totalTimeLeft <= 60 && totalTimeLeft > 0 && !timerWarning) {
-      setTimerWarning(true);
+    if (totalTimeLeft <= 0 || initialTime <= 0) return;
+    const half = Math.round(initialTime * 0.5);
+    const quarter = Math.round(initialTime * 0.25);
+    const tenPct = Math.round(initialTime * 0.1);
+    if (totalTimeLeft <= 10) {
+      setTimerNotice('⚠️ Less than 10 seconds!');
+      setCriticalTimer(true);
+    } else if (totalTimeLeft <= 60) {
+      setTimerNotice('⚠️ Less than 1 minute remaining!');
+      setCriticalTimer(true);
+    } else if (totalTimeLeft <= tenPct) {
+      setTimerNotice('⚠️ Less than 10% time remaining!');
+      setCriticalTimer(true);
+    } else if (totalTimeLeft <= quarter) {
+      if (!criticalTimer) {
+        setTimerNotice('⏳ Quarter time remaining');
+      }
+    } else if (totalTimeLeft <= half) {
+      if (!timerNotice) {
+        setTimerNotice('⏳ Half time remaining');
+      }
     }
-  }, [totalTimeLeft, timerWarning]);
+  }, [totalTimeLeft]);
 
   const handleQuizComplete = () => {
+    for (let i = currentQuestionIndex; i < questions.length; i++) {
+      addQuizAnswer({ questionIndex: i, selectedAnswer: -1 });
+    }
     setQuizCompleted(true);
     navigate('/results');
   };
@@ -94,7 +176,7 @@ export default function Quiz() {
     addQuizAnswer({ questionIndex: currentQuestionIndex, selectedAnswer: finalAnswer });
     setShowFeedback(false);
     setSelectedAnswer(null);
-    
+
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
@@ -105,7 +187,11 @@ export default function Quiz() {
 
   const handleSubmitAnswer = () => {
     if (selectedAnswer === null) return;
-    setShowFeedback(true);
+    if (feedbackMode === 'after_each') {
+      setShowFeedback(true);
+    } else {
+      handleNextQuestion(selectedAnswer);
+    }
   };
 
   if (loading) {
@@ -121,6 +207,22 @@ export default function Quiz() {
           <div className="mt-6">
             <Skeleton className="h-12 w-full" />
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (cooldownBlocked) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className={`max-w-md w-full mx-4 p-8 rounded-xl shadow-lg text-center ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+          <div className="text-5xl mb-4">⏳</div>
+          <h2 className="text-2xl font-bold mb-4">Quiz Unavailable</h2>
+          <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{cooldownMessage}</p>
+          <button onClick={() => navigate('/home')}
+            className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
+            Back to Home
+          </button>
         </div>
       </div>
     );
@@ -142,33 +244,41 @@ export default function Quiz() {
           <span className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             Question {currentQuestionIndex + 1} of {questions.length}
           </span>
-          <div className={`px-4 py-2 rounded-lg ${totalTimeLeft <= 60 ? 'bg-red-500' : 'bg-indigo-600'} text-white font-semibold`}>
+          <div className={`px-4 py-2 rounded-lg font-bold transition-all ${
+            criticalTimer ? 'bg-red-500 animate-pulse scale-110'
+            : totalTimeLeft <= Math.round(initialTime * 0.25) ? 'bg-yellow-500'
+            : 'bg-indigo-600'
+          } text-white`}>
             ⏱️ {Math.floor(totalTimeLeft / 60)}:{(totalTimeLeft % 60).toString().padStart(2, '0')}
           </div>
         </div>
 
-        {timerWarning && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-500 text-red-700 rounded-lg animate-pulse">
-            ⚠️ Warning: Less than 1 minute remaining!
+        {timerNotice && (
+          <div className={`mb-4 p-3 rounded-lg font-semibold ${
+            criticalTimer
+              ? 'bg-red-100 border border-red-500 text-red-700 animate-pulse'
+              : 'bg-yellow-100 border border-yellow-500 text-yellow-800'
+          }`}>
+            {timerNotice}
           </div>
         )}
-        
+
         <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-          <div 
+          <div
             className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
             style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
           />
         </div>
-        
+
         <div className="flex gap-1 mb-6">
           {questions.map((_, idx) => (
             <div
               key={idx}
               className={`h-2 flex-1 rounded ${
-                idx < currentQuestionIndex 
-                  ? 'bg-green-500' 
-                  : idx === currentQuestionIndex 
-                    ? 'bg-indigo-600' 
+                idx < currentQuestionIndex
+                  ? 'bg-green-500'
+                  : idx === currentQuestionIndex
+                    ? 'bg-indigo-600'
                     : 'bg-gray-300'
               }`}
             />
@@ -179,7 +289,7 @@ export default function Quiz() {
           <h2 className={`text-xl font-semibold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             {currentQuestion?.question}
           </h2>
-          
+
           <div className="space-y-3">
             {currentOptions.map((option, index) => {
               let buttonClass = `w-full p-4 text-left rounded-lg border-2 transition-all `;
@@ -192,11 +302,11 @@ export default function Quiz() {
                   buttonClass += darkMode ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-500';
                 }
               } else {
-                buttonClass += selectedAnswer === index 
+                buttonClass += selectedAnswer === index
                   ? darkMode ? 'border-indigo-500 bg-indigo-900/50 text-indigo-300' : 'border-indigo-600 bg-indigo-50 text-indigo-700'
                   : darkMode ? 'bg-gray-700 border-gray-600 text-white hover:border-gray-500' : 'bg-white border-gray-300 text-gray-700 hover:border-indigo-400';
               }
-              
+
               return (
                 <button
                   key={index}
@@ -228,7 +338,7 @@ export default function Quiz() {
             disabled={selectedAnswer === null}
             className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Submit Answer
+            {feedbackMode === 'after_each' ? 'Submit Answer' : selectedAnswer !== null ? 'Next Question' : 'Select an Answer'}
           </button>
         ) : (
           <button
