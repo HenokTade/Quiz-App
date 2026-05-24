@@ -135,7 +135,7 @@ function StudentView() {
                     {results.slice(0, 10).map(r => {
                       const pct = Math.round((r.score / r.totalQuestions) * 100);
                       return (
-                        <div key={r.id} className={`flex justify-between items-center p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <div key={r.id} onClick={() => navigate(`/result/${r.id}`)} className={`flex justify-between items-center p-4 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} transition-colors`}>
                           <div>
                             <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{categories[r.category] || r.category}</p>
                             <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{new Date(r.date).toLocaleDateString()}</p>

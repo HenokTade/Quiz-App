@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
@@ -216,6 +216,30 @@ export default function Quiz() {
     }
   };
 
+  const shouldBlock = !quizCompleted && !cooldownBlocked && questions.length > 0;
+  const blocker = useBlocker(shouldBlock);
+
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      const proceed = window.confirm('You have an unfinished quiz. Are you sure you want to leave? Your progress will be lost.');
+      if (proceed) {
+        blocker.proceed();
+      } else {
+        blocker.reset();
+      }
+    }
+  }, [blocker]);
+
+  useEffect(() => {
+    if (!shouldBlock) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [shouldBlock]);
+
   if (loading) {
     return (
       <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -308,6 +332,23 @@ export default function Quiz() {
         </div>
 
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6 mb-6`}>
+          <div className="flex gap-2 mb-4">
+            {currentQuestionIndex > 0 && (
+              <button
+                onClick={handlePreviousQuestion}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+              >
+                ← Previous
+              </button>
+            )}
+            <div className="flex-1" />
+            <button
+              onClick={handleNextQuestion}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+            >
+              {currentQuestionIndex < questions.length - 1 ? 'Skip →' : 'Finish'}
+            </button>
+          </div>
           <h2 className={`text-xl font-semibold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             {currentQuestion?.question}
           </h2>
@@ -352,37 +393,19 @@ export default function Quiz() {
               </p>
             </div>
           )}
-        </div>
 
-        <div className="flex gap-3">
-          {currentQuestionIndex > 0 && (
-            <button
-              onClick={handlePreviousQuestion}
-              className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              ← Previous
-            </button>
-          )}
           {!showFeedback ? (
-            <>
-              <button
-                onClick={handleSubmitAnswer}
-                disabled={feedbackMode === 'after_each' && selectedAnswer === null}
-                className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {feedbackMode === 'after_each' ? 'Submit Answer' : 'Next →'}
-              </button>
-              <button
-                onClick={handleNextQuestion}
-                className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                {currentQuestionIndex < questions.length - 1 ? 'Skip →' : 'Finish'}
-              </button>
-            </>
+            <button
+              onClick={handleSubmitAnswer}
+              disabled={feedbackMode === 'after_each' && selectedAnswer === null}
+              className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {feedbackMode === 'after_each' ? 'Submit Answer' : 'Next →'}
+            </button>
           ) : (
             <button
               onClick={handleNextQuestion}
-              className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+              className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors"
             >
               {currentQuestionIndex < questions.length - 1 ? 'Next →' : 'View Results'}
             </button>

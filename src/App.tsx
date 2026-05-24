@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import Home from './pages/Home';
 import Quiz from './pages/Quiz';
 import Results from './pages/Results';
+import ResultDetail from './pages/ResultDetail';
 import StudentDashboard from './pages/StudentDashboard';
 import QuestionsManager from './pages/QuestionsManager';
 
@@ -64,6 +65,7 @@ function AppContent() {
         <Route path="/quiz/:categoryId" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
         <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
+        <Route path="/result/:resultId" element={<ProtectedRoute><ResultDetail /></ProtectedRoute>} />
         <Route path="/questions" element={<ProtectedRoute><QuestionsManager /></ProtectedRoute>} />
         <Route path="/admin" element={<Navigate to="/dashboard" />} />
         <Route path="/" element={<Navigate to="/login" />} />
