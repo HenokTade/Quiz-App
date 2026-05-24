@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
 import { QuestionSkeleton, Skeleton } from '../components/Skeleton';
 
-const MAX_QUESTIONS = 10;
+
 
 export default function Quiz() {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -95,7 +95,7 @@ export default function Quiz() {
           ...doc.data()
         })) as Question[];
 
-        const shuffledQuestions = [...fetchedQuestions].sort(() => Math.random() - 0.5).slice(0, MAX_QUESTIONS);
+        const shuffledQuestions = [...fetchedQuestions].sort(() => Math.random() - 0.5);
         const shuffledQuestionsWithOptions = shuffledQuestions.map((q) => {
           const correctOptionText = q.options[q.correctAnswer];
           const shuffledOpts = [...q.options].sort(() => Math.random() - 0.5);
