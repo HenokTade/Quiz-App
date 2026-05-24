@@ -122,6 +122,12 @@ export default function Quiz() {
   }, [categoryId, user]);
 
   useEffect(() => {
+    if (quizCompleted) {
+      navigate('/results');
+    }
+  }, [quizCompleted]);
+
+  useEffect(() => {
     if (showFeedback || quizCompleted || questions.length === 0) return;
     const timer = setInterval(() => {
       setTotalTimeLeft((prev) => {
@@ -179,7 +185,6 @@ export default function Quiz() {
       }
     }
     setQuizCompleted(true);
-    navigate('/results');
   };
 
   const handleAnswerSelect = (index: number) => {
@@ -203,7 +208,6 @@ export default function Quiz() {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
       setQuizCompleted(true);
-      navigate('/results');
     }
   };
 
