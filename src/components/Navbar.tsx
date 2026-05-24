@@ -21,7 +21,10 @@ export default function Navbar() {
   return (
     <nav className={`${darkMode ? 'bg-gray-900' : 'bg-white'} shadow-md`}>
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold text-indigo-600">QuizApp</Link>
+        <Link to="/" className="flex items-center gap-2 text-xl font-bold text-indigo-600">
+          <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-full object-cover border border-indigo-500/30" />
+          <span>QuizApp</span>
+        </Link>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setDarkMode(!darkMode)}
