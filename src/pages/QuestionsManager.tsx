@@ -3,7 +3,7 @@ import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } 
 import { db } from '../lib/firebase';
 import { useStore, Question, QuizSettings, RetakeMode, FeedbackMode } from '../store/useStore';
 
-interface Category { id: string; name: string; quizTime?: number; retakeMode?: RetakeMode; retakeCooldown?: number; feedbackMode?: FeedbackMode }
+interface Category { id: string; name: string; quizTime?: number; retakeMode?: RetakeMode; retakeCooldown?: number; feedbackMode?: FeedbackMode; shuffleQuestions?: boolean }
 
 interface BulkUploadSection {
   section_title: string;
@@ -41,6 +41,7 @@ export default function QuestionsManager() {
   const [retakeMode, setRetakeMode] = useState<RetakeMode>('unlimited');
   const [retakeCooldown, setRetakeCooldown] = useState(0);
   const [feedbackMode, setFeedbackMode] = useState<FeedbackMode>('after_each');
+  const [shuffleQuestions, setShuffleQuestions] = useState(true);
   const [settingsSuccess, setSettingsSuccess] = useState('');
   const [settingsError, setSettingsError] = useState('');
 
@@ -70,7 +71,8 @@ export default function QuestionsManager() {
       quizTime: 5,
       retakeMode: 'unlimited',
       retakeCooldown: 0,
-      feedbackMode: 'after_each'
+      feedbackMode: 'after_each',
+      shuffleQuestions: true
     });
     setNewCategory('');
     setCategorySuccess('Category added successfully!');
@@ -197,6 +199,7 @@ export default function QuestionsManager() {
       setRetakeMode(cat.retakeMode ?? 'unlimited');
       setRetakeCooldown(cat.retakeCooldown ?? 0);
       setFeedbackMode(cat.feedbackMode ?? 'after_each');
+      setShuffleQuestions(cat.shuffleQuestions ?? true);
     }
   };
 
@@ -208,7 +211,8 @@ export default function QuestionsManager() {
         quizTime: quizTime,
         retakeMode: retakeMode,
         retakeCooldown: retakeMode === 'cooldown' ? retakeCooldown : 0,
-        feedbackMode: feedbackMode
+        feedbackMode: feedbackMode,
+        shuffleQuestions: shuffleQuestions
       });
       setSettingsSuccess('Settings saved successfully!');
       setTimeout(() => setSettingsSuccess(''), 3000);
@@ -502,6 +506,25 @@ export default function QuestionsManager() {
                       </label>
                     ))}
                   </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Question Order
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <div
+                      onClick={() => setShuffleQuestions(!shuffleQuestions)}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${shuffleQuestions ? 'bg-indigo-600' : 'bg-gray-400'}`}
+                    >
+                      <div
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${shuffleQuestions ? 'translate-x-5' : 'translate-x-0'}`}
+                      />
+                    </div>
+                    <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      {shuffleQuestions ? 'Shuffle questions randomly' : 'Show questions in order'}
+                    </span>
+                  </label>
                 </div>
 
                 {settingsError && (

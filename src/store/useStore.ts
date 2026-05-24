@@ -46,7 +46,6 @@ interface AppState {
   currentCategoryId: string;
   currentCategoryName: string;
   feedbackMode: FeedbackMode;
-  shuffleQuestions: boolean;
   setUser: (user: User | null) => void;
   setDarkMode: (dark: boolean) => void;
   setCurrentQuiz: (questions: Question[]) => void;
@@ -57,7 +56,6 @@ interface AppState {
   resetQuiz: () => void;
   setCurrentCategory: (id: string, name: string) => void;
   setFeedbackMode: (value: FeedbackMode) => void;
-  setShuffleQuestions: (value: boolean) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -70,7 +68,6 @@ export const useStore = create<AppState>((set) => ({
   currentCategoryId: '',
   currentCategoryName: '',
   feedbackMode: 'after_each',
-  shuffleQuestions: true,
   setUser: (user) => set({ user }),
   setDarkMode: (darkMode) => set({ darkMode }),
   setCurrentQuiz: (currentQuiz) => set({ currentQuiz }),
@@ -88,8 +85,7 @@ export const useStore = create<AppState>((set) => ({
     return { quizAnswers: [...state.quizAnswers, answer] };
   }),
   startQuiz: () => set({ quizStartTime: Date.now(), currentQuestionIndex: 0, quizAnswers: [] }),
-  resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each', shuffleQuestions: true }),
+  resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each' }),
   setCurrentCategory: (id, name) => set({ currentCategoryId: id, currentCategoryName: name }),
   setFeedbackMode: (value) => set({ feedbackMode: value }),
-  setShuffleQuestions: (value) => set({ shuffleQuestions: value }),
 }));

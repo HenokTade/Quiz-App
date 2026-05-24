@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useBlocker } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
@@ -20,7 +20,7 @@ export default function Quiz() {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [cooldownBlocked, setCooldownBlocked] = useState(false);
   const [cooldownMessage, setCooldownMessage] = useState('');
-  const { darkMode, user, startQuiz, addQuizAnswer, updateQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode, shuffleQuestions, quizAnswers } = useStore();
+  const { darkMode, user, startQuiz, addQuizAnswer, updateQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode, quizAnswers } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,6 +38,7 @@ export default function Quiz() {
           retakeMode: catData.retakeMode ?? 'unlimited',
           retakeCooldown: catData.retakeCooldown ?? 0,
           feedbackMode: catData.feedbackMode ?? 'after_each',
+          shuffleQuestions: catData.shuffleQuestions ?? true,
         };
 
         setCurrentCategory(categoryId!, categoryName);
@@ -95,7 +96,7 @@ export default function Quiz() {
           ...doc.data()
         })) as Question[];
 
-        const orderedQuestions = shuffleQuestions
+        const orderedQuestions = settings.shuffleQuestions
           ? [...fetchedQuestions].sort(() => Math.random() - 0.5)
           : [...fetchedQuestions];
         const shuffledQuestionsWithOptions = orderedQuestions.map((q) => {
@@ -120,12 +121,6 @@ export default function Quiz() {
     };
     fetchData();
   }, [categoryId, user]);
-
-  useEffect(() => {
-    if (quizCompleted) {
-      navigate('/results');
-    }
-  }, [quizCompleted]);
 
   useEffect(() => {
     if (showFeedback || quizCompleted || questions.length === 0) return;
@@ -185,6 +180,7 @@ export default function Quiz() {
       }
     }
     setQuizCompleted(true);
+    navigate('/results');
   };
 
   const handleAnswerSelect = (index: number) => {
@@ -208,6 +204,7 @@ export default function Quiz() {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
       setQuizCompleted(true);
+      navigate('/results');
     }
   };
 
@@ -219,30 +216,6 @@ export default function Quiz() {
       handleNextQuestion();
     }
   };
-
-  const shouldBlock = !quizCompleted && !cooldownBlocked && questions.length > 0;
-  const blocker = useBlocker(shouldBlock);
-
-  useEffect(() => {
-    if (blocker.state === 'blocked') {
-      const proceed = window.confirm('You have an unfinished quiz. Are you sure you want to leave? Your progress will be lost.');
-      if (proceed) {
-        blocker.proceed();
-      } else {
-        blocker.reset();
-      }
-    }
-  }, [blocker]);
-
-  useEffect(() => {
-    if (!shouldBlock) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [shouldBlock]);
 
   if (loading) {
     return (
