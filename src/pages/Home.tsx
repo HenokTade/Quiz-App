@@ -19,7 +19,7 @@ interface Category {
 export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, darkMode } = useStore();
+  const { user, darkMode, shuffleQuestions, setShuffleQuestions } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -98,7 +98,20 @@ export default function Home() {
         <h1 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
           Welcome, {user.displayName || 'Student'}!
         </h1>
-        <h2 className={`text-xl mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Choose a Category</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className={`text-xl ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Choose a Category</h2>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Shuffle</span>
+            <div
+              onClick={() => setShuffleQuestions(!shuffleQuestions)}
+              className={`relative w-10 h-5 rounded-full transition-colors ${shuffleQuestions ? 'bg-indigo-600' : 'bg-gray-400'}`}
+            >
+              <div
+                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${shuffleQuestions ? 'translate-x-5' : 'translate-x-0'}`}
+              />
+            </div>
+          </label>
+        </div>
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (

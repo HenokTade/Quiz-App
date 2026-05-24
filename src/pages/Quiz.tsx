@@ -20,7 +20,7 @@ export default function Quiz() {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [cooldownBlocked, setCooldownBlocked] = useState(false);
   const [cooldownMessage, setCooldownMessage] = useState('');
-  const { darkMode, user, startQuiz, addQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode } = useStore();
+  const { darkMode, user, startQuiz, addQuizAnswer, updateQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode, shuffleQuestions, quizAnswers } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -95,8 +95,10 @@ export default function Quiz() {
           ...doc.data()
         })) as Question[];
 
-        const shuffledQuestions = [...fetchedQuestions].sort(() => Math.random() - 0.5);
-        const shuffledQuestionsWithOptions = shuffledQuestions.map((q) => {
+        const orderedQuestions = shuffleQuestions
+          ? [...fetchedQuestions].sort(() => Math.random() - 0.5)
+          : [...fetchedQuestions];
+        const shuffledQuestionsWithOptions = orderedQuestions.map((q) => {
           const correctOptionText = q.options[q.correctAnswer];
           const shuffledOpts = [...q.options].sort(() => Math.random() - 0.5);
           const newCorrectAnswerIndex = shuffledOpts.indexOf(correctOptionText);
@@ -158,9 +160,23 @@ export default function Quiz() {
     }
   }, [totalTimeLeft]);
 
+  useEffect(() => {
+    const prev = quizAnswers.find(a => a.questionIndex === currentQuestionIndex);
+    setSelectedAnswer(prev !== undefined ? prev.selectedAnswer : null);
+    setShowFeedback(false);
+  }, [currentQuestionIndex, quizAnswers]);
+
+  const saveCurrentAnswer = () => {
+    const answer = selectedAnswer !== null ? selectedAnswer : -1;
+    updateQuizAnswer({ questionIndex: currentQuestionIndex, selectedAnswer: answer });
+  };
+
   const handleQuizComplete = () => {
-    for (let i = currentQuestionIndex; i < questions.length; i++) {
-      addQuizAnswer({ questionIndex: i, selectedAnswer: -1 });
+    for (let i = 0; i < questions.length; i++) {
+      const existing = quizAnswers.find(a => a.questionIndex === i);
+      if (!existing) {
+        addQuizAnswer({ questionIndex: i, selectedAnswer: -1 });
+      }
     }
     setQuizCompleted(true);
     navigate('/results');
@@ -171,11 +187,17 @@ export default function Quiz() {
     setSelectedAnswer(index);
   };
 
-  const handleNextQuestion = (answer: number | null) => {
-    const finalAnswer = answer !== null ? answer : -1;
-    addQuizAnswer({ questionIndex: currentQuestionIndex, selectedAnswer: finalAnswer });
+  const handlePreviousQuestion = () => {
+    saveCurrentAnswer();
     setShowFeedback(false);
-    setSelectedAnswer(null);
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    saveCurrentAnswer();
+    setShowFeedback(false);
 
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
@@ -186,11 +208,11 @@ export default function Quiz() {
   };
 
   const handleSubmitAnswer = () => {
-    if (selectedAnswer === null) return;
     if (feedbackMode === 'after_each') {
+      if (selectedAnswer === null) return;
       setShowFeedback(true);
     } else {
-      handleNextQuestion(selectedAnswer);
+      handleNextQuestion();
     }
   };
 
@@ -332,22 +354,40 @@ export default function Quiz() {
           )}
         </div>
 
-        {!showFeedback ? (
-          <button
-            onClick={handleSubmitAnswer}
-            disabled={selectedAnswer === null}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {feedbackMode === 'after_each' ? 'Submit Answer' : selectedAnswer !== null ? 'Next Question' : 'Select an Answer'}
-          </button>
-        ) : (
-          <button
-            onClick={() => handleNextQuestion(selectedAnswer)}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700"
-          >
-            {currentQuestionIndex < questions.length - 1 ? 'Next Question' : 'View Results'}
-          </button>
-        )}
+        <div className="flex gap-3">
+          {currentQuestionIndex > 0 && (
+            <button
+              onClick={handlePreviousQuestion}
+              className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              ← Previous
+            </button>
+          )}
+          {!showFeedback ? (
+            <>
+              <button
+                onClick={handleSubmitAnswer}
+                disabled={feedbackMode === 'after_each' && selectedAnswer === null}
+                className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {feedbackMode === 'after_each' ? 'Submit Answer' : 'Next →'}
+              </button>
+              <button
+                onClick={handleNextQuestion}
+                className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                {currentQuestionIndex < questions.length - 1 ? 'Skip →' : 'Finish'}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleNextQuestion}
+              className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              {currentQuestionIndex < questions.length - 1 ? 'Next →' : 'View Results'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

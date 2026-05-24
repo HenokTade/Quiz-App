@@ -46,15 +46,18 @@ interface AppState {
   currentCategoryId: string;
   currentCategoryName: string;
   feedbackMode: FeedbackMode;
+  shuffleQuestions: boolean;
   setUser: (user: User | null) => void;
   setDarkMode: (dark: boolean) => void;
   setCurrentQuiz: (questions: Question[]) => void;
   setCurrentQuestionIndex: (index: number) => void;
   addQuizAnswer: (answer: { questionIndex: number; selectedAnswer: number }) => void;
+  updateQuizAnswer: (answer: { questionIndex: number; selectedAnswer: number }) => void;
   startQuiz: () => void;
   resetQuiz: () => void;
   setCurrentCategory: (id: string, name: string) => void;
   setFeedbackMode: (value: FeedbackMode) => void;
+  setShuffleQuestions: (value: boolean) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -67,6 +70,7 @@ export const useStore = create<AppState>((set) => ({
   currentCategoryId: '',
   currentCategoryName: '',
   feedbackMode: 'after_each',
+  shuffleQuestions: true,
   setUser: (user) => set({ user }),
   setDarkMode: (darkMode) => set({ darkMode }),
   setCurrentQuiz: (currentQuiz) => set({ currentQuiz }),
@@ -74,8 +78,18 @@ export const useStore = create<AppState>((set) => ({
   addQuizAnswer: (answer) => set((state) => ({
     quizAnswers: [...state.quizAnswers, answer]
   })),
+  updateQuizAnswer: (answer) => set((state) => {
+    const existing = state.quizAnswers.findIndex(a => a.questionIndex === answer.questionIndex);
+    if (existing >= 0) {
+      const updated = [...state.quizAnswers];
+      updated[existing] = answer;
+      return { quizAnswers: updated };
+    }
+    return { quizAnswers: [...state.quizAnswers, answer] };
+  }),
   startQuiz: () => set({ quizStartTime: Date.now(), currentQuestionIndex: 0, quizAnswers: [] }),
-  resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each' }),
+  resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each', shuffleQuestions: true }),
   setCurrentCategory: (id, name) => set({ currentCategoryId: id, currentCategoryName: name }),
   setFeedbackMode: (value) => set({ feedbackMode: value }),
+  setShuffleQuestions: (value) => set({ shuffleQuestions: value }),
 }));
