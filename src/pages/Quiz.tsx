@@ -33,6 +33,14 @@ export default function Quiz() {
         }
         const catData = categoryDoc.data();
         const categoryName = catData.name || 'Unknown';
+
+        if (catData.locked === true && user?.role !== 'admin') {
+          setCooldownBlocked(true);
+          setCooldownMessage('This exam is currently locked by the instructor. Please check back later.');
+          setLoading(false);
+          return;
+        }
+
         const settings = {
           quizTime: catData.quizTime ?? 5,
           retakeMode: catData.retakeMode ?? 'unlimited',

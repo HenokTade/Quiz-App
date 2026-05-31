@@ -3,7 +3,7 @@ import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } 
 import { db } from '../lib/firebase';
 import { useStore, Question, QuizSettings, RetakeMode, FeedbackMode } from '../store/useStore';
 
-interface Category { id: string; name: string; quizTime?: number; retakeMode?: RetakeMode; retakeCooldown?: number; feedbackMode?: FeedbackMode; shuffleQuestions?: boolean }
+interface Category { id: string; name: string; quizTime?: number; retakeMode?: RetakeMode; retakeCooldown?: number; feedbackMode?: FeedbackMode; shuffleQuestions?: boolean; locked?: boolean }
 
 interface BulkUploadSection {
   section_title: string;
@@ -42,6 +42,7 @@ export default function QuestionsManager() {
   const [retakeCooldown, setRetakeCooldown] = useState(0);
   const [feedbackMode, setFeedbackMode] = useState<FeedbackMode>('after_each');
   const [shuffleQuestions, setShuffleQuestions] = useState(true);
+  const [locked, setLocked] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState('');
   const [settingsError, setSettingsError] = useState('');
 
@@ -72,7 +73,8 @@ export default function QuestionsManager() {
       retakeMode: 'unlimited',
       retakeCooldown: 0,
       feedbackMode: 'after_each',
-      shuffleQuestions: true
+      shuffleQuestions: true,
+      locked: false
     });
     setNewCategory('');
     setCategorySuccess('Category added successfully!');
@@ -200,6 +202,19 @@ export default function QuestionsManager() {
       setRetakeCooldown(cat.retakeCooldown ?? 0);
       setFeedbackMode(cat.feedbackMode ?? 'after_each');
       setShuffleQuestions(cat.shuffleQuestions ?? true);
+      setLocked(cat.locked ?? false);
+    }
+  };
+
+  const handleToggleLock = async () => {
+    if (!settingsCategory) return;
+    const newLocked = !locked;
+    try {
+      await updateDoc(doc(db, 'categories', settingsCategory), { locked: newLocked });
+      setLocked(newLocked);
+      fetchCategories();
+    } catch (e) {
+      setSettingsError(`Error: ${e instanceof Error ? e.message : 'Unknown'}`);
     }
   };
 
@@ -212,7 +227,8 @@ export default function QuestionsManager() {
         retakeMode: retakeMode,
         retakeCooldown: retakeMode === 'cooldown' ? retakeCooldown : 0,
         feedbackMode: feedbackMode,
-        shuffleQuestions: shuffleQuestions
+        shuffleQuestions: shuffleQuestions,
+        locked: locked
       });
       setSettingsSuccess('Settings saved successfully!');
       setTimeout(() => setSettingsSuccess(''), 3000);
@@ -525,6 +541,34 @@ export default function QuestionsManager() {
                       {shuffleQuestions ? 'Shuffle questions randomly' : 'Show questions in order'}
                     </span>
                   </label>
+                </div>
+
+                <div className="mb-6">
+                  <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Exam Status
+                  </label>
+                  <div className={`p-4 rounded-lg border-2 transition-all ${locked ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-green-500 bg-green-50 dark:bg-green-900/20'}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className={`text-lg font-semibold ${locked ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                          {locked ? '🔒 Locked' : '🔓 Unlocked'}
+                        </span>
+                        <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {locked ? 'Students cannot access this exam until you unlock it.' : 'Students can access and take this exam.'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleToggleLock}
+                        className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                          locked
+                            ? 'bg-green-600 text-white hover:bg-green-700'
+                            : 'bg-red-600 text-white hover:bg-red-700'
+                        }`}
+                      >
+                        {locked ? 'Unlock' : 'Lock'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {settingsError && (

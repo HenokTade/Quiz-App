@@ -14,6 +14,7 @@ interface Category {
   retakeCooldown?: number;
   cooldownEnd?: Date | null;
   takenOnce?: boolean;
+  locked?: boolean;
 }
 
 export default function Home() {
@@ -37,6 +38,7 @@ export default function Home() {
             quizTime: catData.quizTime ?? 5,
             retakeMode: catData.retakeMode ?? 'unlimited',
             retakeCooldown: catData.retakeCooldown ?? 0,
+            locked: catData.locked ?? false,
             cooldownEnd: null,
             takenOnce: false,
           });
@@ -110,7 +112,7 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {categories.map((cat) => {
-              const blocked = cat.cooldownEnd !== null || cat.takenOnce;
+              const blocked = cat.cooldownEnd !== null || cat.takenOnce || (cat.locked === true && user?.role !== 'admin');
               return (
                 <div
                   key={cat.id}
@@ -133,6 +135,11 @@ export default function Home() {
                   {cat.cooldownEnd && (
                     <p className="mt-3 text-sm text-red-400 flex items-center gap-1">
                       ⏳ Retake available in {formatCooldown(cat.cooldownEnd)}
+                    </p>
+                  )}
+                  {cat.locked && (
+                    <p className="mt-3 text-sm text-red-400 flex items-center gap-1">
+                      🔒 Exam is locked — wait for instructor
                     </p>
                   )}
                 </div>
