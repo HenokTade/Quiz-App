@@ -225,6 +225,12 @@ export default function Quiz() {
     }
   };
 
+  const handleJumpToQuestion = (index: number) => {
+    saveCurrentAnswer();
+    setShowFeedback(false);
+    setCurrentQuestionIndex(index);
+  };
+
   if (loading) {
     return (
       <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -301,19 +307,31 @@ export default function Quiz() {
           />
         </div>
 
-        <div className="flex gap-1 mb-6">
-          {questions.map((_, idx) => (
-            <div
-              key={idx}
-              className={`h-2 flex-1 rounded ${
-                idx < currentQuestionIndex
-                  ? 'bg-green-500'
-                  : idx === currentQuestionIndex
-                    ? 'bg-indigo-600'
-                    : 'bg-gray-300'
-              }`}
-            />
-          ))}
+        <div className="flex flex-wrap gap-2 mb-6 justify-center">
+          {questions.map((_, idx) => {
+            const answer = quizAnswers.find(a => a.questionIndex === idx);
+            const isAnswered = answer !== undefined && answer.selectedAnswer !== -1;
+            const isCurrent = idx === currentQuestionIndex;
+
+            let btnClass = isCurrent
+              ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 scale-110'
+              : isAnswered
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : darkMode
+                  ? 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300';
+
+            return (
+              <button
+                key={idx}
+                onClick={() => handleJumpToQuestion(idx)}
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full text-xs sm:text-sm font-medium transition-all ${btnClass}`}
+                title={`Go to question ${idx + 1}`}
+              >
+                {idx + 1}
+              </button>
+            );
+          })}
         </div>
 
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6 mb-6`}>
