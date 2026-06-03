@@ -33,17 +33,6 @@ export default function Quiz() {
   questionsRef.current = questions;
 
   useEffect(() => {
-    const state = useStore.getState();
-
-    if (state.quizStartTime > 0 && state.currentCategoryId === categoryId && state.currentQuiz.length > 0 && state.quizTime > 0) {
-      setQuestions(state.currentQuiz);
-      setInitialTime(state.quizTime);
-      const elapsed = Math.floor((Date.now() - state.quizStartTime) / 1000);
-      setTotalTimeLeft(Math.max(0, state.quizTime - elapsed));
-      setLoading(false);
-      return;
-    }
-
     const fetchData = async () => {
       try {
         const categoryDoc = await getDoc(doc(db, 'categories', categoryId!));
@@ -57,6 +46,17 @@ export default function Quiz() {
         if (catData.locked === true && user?.role !== 'admin') {
           setCooldownBlocked(true);
           setCooldownMessage('This exam is currently locked by the instructor. Please check back later.');
+          setLoading(false);
+          return;
+        }
+
+        const state = useStore.getState();
+
+        if (state.quizStartTime > 0 && state.currentCategoryId === categoryId && state.currentQuiz.length > 0 && state.quizTime > 0) {
+          setQuestions(state.currentQuiz);
+          setInitialTime(state.quizTime);
+          const elapsed = Math.floor((Date.now() - state.quizStartTime) / 1000);
+          setTotalTimeLeft(Math.max(0, state.quizTime - elapsed));
           setLoading(false);
           return;
         }
