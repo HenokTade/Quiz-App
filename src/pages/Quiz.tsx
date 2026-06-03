@@ -20,6 +20,7 @@ export default function Quiz() {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [cooldownBlocked, setCooldownBlocked] = useState(false);
   const [cooldownMessage, setCooldownMessage] = useState('');
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const { darkMode, user, startQuiz, addQuizAnswer, updateQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode, quizAnswers } = useStore();
   const navigate = useNavigate();
 
@@ -175,6 +176,22 @@ export default function Quiz() {
     setShowFeedback(false);
   }, [currentQuestionIndex, quizAnswers]);
 
+  useEffect(() => {
+    if (quizCompleted) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [quizCompleted]);
+
+  useEffect(() => {
+    if (quizCompleted) return;
+    const handler = () => setShowLeaveConfirm(true);
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, [quizCompleted]);
+
   const saveCurrentAnswer = () => {
     const answer = selectedAnswer !== null ? selectedAnswer : -1;
     updateQuizAnswer({ questionIndex: currentQuestionIndex, selectedAnswer: answer });
@@ -231,6 +248,23 @@ export default function Quiz() {
     setCurrentQuestionIndex(index);
   };
 
+  const handleBack = () => {
+    if (quizCompleted) {
+      navigate('/home');
+    } else {
+      setShowLeaveConfirm(true);
+    }
+  };
+
+  const handleConfirmLeave = () => {
+    setShowLeaveConfirm(false);
+    navigate('/home');
+  };
+
+  const handleCancelLeave = () => {
+    setShowLeaveConfirm(false);
+  };
+
   if (loading) {
     return (
       <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -278,9 +312,19 @@ export default function Quiz() {
     <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-2xl mx-auto px-4">
         <div className="mb-6 flex justify-between items-center">
-          <span className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            Question {currentQuestionIndex + 1} of {questions.length}
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleBack}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              ← Back
+            </button>
+            <span className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Question {currentQuestionIndex + 1} of {questions.length}
+            </span>
+          </div>
           <div className={`px-4 py-2 rounded-lg font-bold transition-all ${
             criticalTimer ? 'bg-red-500 animate-pulse scale-110'
             : totalTimeLeft <= Math.round(initialTime * 0.25) ? 'bg-yellow-500'
@@ -307,14 +351,14 @@ export default function Quiz() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-6 justify-center">
+        <div className="flex flex-wrap gap-1.5 mb-4 justify-center">
           {questions.map((_, idx) => {
             const answer = quizAnswers.find(a => a.questionIndex === idx);
             const isAnswered = answer !== undefined && answer.selectedAnswer !== -1;
             const isCurrent = idx === currentQuestionIndex;
 
             let btnClass = isCurrent
-              ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 scale-110'
+              ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-1 scale-110'
               : isAnswered
                 ? 'bg-green-500 text-white hover:bg-green-600'
                 : darkMode
@@ -325,7 +369,7 @@ export default function Quiz() {
               <button
                 key={idx}
                 onClick={() => handleJumpToQuestion(idx)}
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full text-xs sm:text-sm font-medium transition-all ${btnClass}`}
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-xs font-medium transition-all ${btnClass}`}
                 title={`Go to question ${idx + 1}`}
               >
                 {idx + 1}
@@ -415,6 +459,31 @@ export default function Quiz() {
           )}
         </div>
       </div>
+
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className={`mx-4 p-6 rounded-xl shadow-xl max-w-sm w-full ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+            <h3 className="text-lg font-bold mb-2">Leave Quiz?</h3>
+            <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              You have not finished the quiz. Your progress will be lost. Are you sure you want to leave?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleCancelLeave}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                onClick={handleConfirmLeave}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
