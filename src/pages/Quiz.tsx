@@ -159,14 +159,6 @@ export default function Quiz() {
       const remaining = Math.max(0, initialTime - elapsed);
       setTotalTimeLeft(remaining);
       if (remaining <= 0) {
-        const qs = questionsRef.current;
-        const answers = quizAnswersRef.current;
-        for (let i = 0; i < qs.length; i++) {
-          const existing = answers.find(a => a.questionIndex === i);
-          if (!existing) {
-            addQuizAnswer({ questionIndex: i, selectedAnswer: -1 });
-          }
-        }
         setQuizCompleted(true);
         navigate('/results');
       }
@@ -224,19 +216,6 @@ export default function Quiz() {
   const saveCurrentAnswer = () => {
     const answer = selectedAnswer !== null ? selectedAnswer : -1;
     updateQuizAnswer({ questionIndex: currentQuestionIndex, selectedAnswer: answer });
-  };
-
-  const handleQuizComplete = () => {
-    const qs = questionsRef.current;
-    const answers = quizAnswersRef.current;
-    for (let i = 0; i < qs.length; i++) {
-      const existing = answers.find(a => a.questionIndex === i);
-      if (!existing) {
-        addQuizAnswer({ questionIndex: i, selectedAnswer: -1 });
-      }
-    }
-    setQuizCompleted(true);
-    navigate('/results');
   };
 
   const handleAnswerSelect = (index: number) => {
