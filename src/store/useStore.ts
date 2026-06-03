@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export type RetakeMode = 'unlimited' | 'cooldown' | 'once';
 export type FeedbackMode = 'after_each' | 'at_end' | 'none';
@@ -43,6 +44,7 @@ interface AppState {
   currentQuestionIndex: number;
   quizAnswers: { questionIndex: number; selectedAnswer: number }[];
   quizStartTime: number;
+  quizTime: number;
   currentCategoryId: string;
   currentCategoryName: string;
   feedbackMode: FeedbackMode;
@@ -58,34 +60,53 @@ interface AppState {
   setFeedbackMode: (value: FeedbackMode) => void;
 }
 
-export const useStore = create<AppState>((set) => ({
-  user: null,
-  darkMode: false,
-  currentQuiz: [],
-  currentQuestionIndex: 0,
-  quizAnswers: [],
-  quizStartTime: 0,
-  currentCategoryId: '',
-  currentCategoryName: '',
-  feedbackMode: 'after_each',
-  setUser: (user) => set({ user }),
-  setDarkMode: (darkMode) => set({ darkMode }),
-  setCurrentQuiz: (currentQuiz) => set({ currentQuiz }),
-  setCurrentQuestionIndex: (currentQuestionIndex) => set({ currentQuestionIndex }),
-  addQuizAnswer: (answer) => set((state) => ({
-    quizAnswers: [...state.quizAnswers, answer]
-  })),
-  updateQuizAnswer: (answer) => set((state) => {
-    const existing = state.quizAnswers.findIndex(a => a.questionIndex === answer.questionIndex);
-    if (existing >= 0) {
-      const updated = [...state.quizAnswers];
-      updated[existing] = answer;
-      return { quizAnswers: updated };
+export const useStore = create<AppState>()(
+  persist(
+    (set) => ({
+      user: null,
+      darkMode: false,
+      currentQuiz: [],
+      currentQuestionIndex: 0,
+      quizAnswers: [],
+      quizStartTime: 0,
+      quizTime: 0,
+      currentCategoryId: '',
+      currentCategoryName: '',
+      feedbackMode: 'after_each',
+      setUser: (user) => set({ user }),
+      setDarkMode: (darkMode) => set({ darkMode }),
+      setCurrentQuiz: (currentQuiz) => set({ currentQuiz }),
+      setCurrentQuestionIndex: (currentQuestionIndex) => set({ currentQuestionIndex }),
+      addQuizAnswer: (answer) => set((state) => ({
+        quizAnswers: [...state.quizAnswers, answer]
+      })),
+      updateQuizAnswer: (answer) => set((state) => {
+        const existing = state.quizAnswers.findIndex(a => a.questionIndex === answer.questionIndex);
+        if (existing >= 0) {
+          const updated = [...state.quizAnswers];
+          updated[existing] = answer;
+          return { quizAnswers: updated };
+        }
+        return { quizAnswers: [...state.quizAnswers, answer] };
+      }),
+      startQuiz: () => set({ quizStartTime: Date.now(), currentQuestionIndex: 0, quizAnswers: [] }),
+      resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, quizTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each' }),
+      setCurrentCategory: (id, name) => set({ currentCategoryId: id, currentCategoryName: name }),
+      setFeedbackMode: (value) => set({ feedbackMode: value }),
+    }),
+    {
+      name: 'quiz-app-store',
+      partialize: (state) => ({
+        darkMode: state.darkMode,
+        currentQuiz: state.currentQuiz,
+        currentQuestionIndex: state.currentQuestionIndex,
+        quizAnswers: state.quizAnswers,
+        quizStartTime: state.quizStartTime,
+        quizTime: state.quizTime,
+        currentCategoryId: state.currentCategoryId,
+        currentCategoryName: state.currentCategoryName,
+        feedbackMode: state.feedbackMode,
+      }),
     }
-    return { quizAnswers: [...state.quizAnswers, answer] };
-  }),
-  startQuiz: () => set({ quizStartTime: Date.now(), currentQuestionIndex: 0, quizAnswers: [] }),
-  resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each' }),
-  setCurrentCategory: (id, name) => set({ currentCategoryId: id, currentCategoryName: name }),
-  setFeedbackMode: (value) => set({ feedbackMode: value }),
-}));
+  )
+);

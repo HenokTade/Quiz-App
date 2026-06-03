@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -22,9 +22,28 @@ export default function Quiz() {
   const [cooldownMessage, setCooldownMessage] = useState('');
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const { darkMode, user, startQuiz, addQuizAnswer, updateQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode, quizAnswers } = useStore();
+  const storeQuizStartTime = useStore((s) => s.quizStartTime);
+  const storeQuizTime = useStore((s) => s.quizTime);
   const navigate = useNavigate();
 
+  const quizAnswersRef = useRef(quizAnswers);
+  quizAnswersRef.current = quizAnswers;
+
+  const questionsRef = useRef(questions);
+  questionsRef.current = questions;
+
   useEffect(() => {
+    const state = useStore.getState();
+
+    if (state.quizStartTime > 0 && state.currentCategoryId === categoryId && state.currentQuiz.length > 0 && state.quizTime > 0) {
+      setQuestions(state.currentQuiz);
+      setInitialTime(state.quizTime);
+      const elapsed = Math.floor((Date.now() - state.quizStartTime) / 1000);
+      setTotalTimeLeft(Math.max(0, state.quizTime - elapsed));
+      setLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
         const categoryDoc = await getDoc(doc(db, 'categories', categoryId!));
@@ -56,6 +75,8 @@ export default function Quiz() {
         const totalTimeSeconds = settings.quizTime * 60;
         setTotalTimeLeft(totalTimeSeconds);
         setInitialTime(totalTimeSeconds);
+
+        useStore.setState({ quizTime: totalTimeSeconds });
 
         if (user && settings.retakeMode !== 'unlimited') {
           const resultsQuery = query(
@@ -132,18 +153,26 @@ export default function Quiz() {
   }, [categoryId, user]);
 
   useEffect(() => {
-    if (showFeedback || quizCompleted || questions.length === 0) return;
+    if (showFeedback || quizCompleted || questions.length === 0 || storeQuizStartTime === 0) return;
     const timer = setInterval(() => {
-      setTotalTimeLeft((prev) => {
-        if (prev <= 1) {
-          handleQuizComplete();
-          return 0;
+      const elapsed = Math.floor((Date.now() - storeQuizStartTime) / 1000);
+      const remaining = Math.max(0, initialTime - elapsed);
+      setTotalTimeLeft(remaining);
+      if (remaining <= 0) {
+        const qs = questionsRef.current;
+        const answers = quizAnswersRef.current;
+        for (let i = 0; i < qs.length; i++) {
+          const existing = answers.find(a => a.questionIndex === i);
+          if (!existing) {
+            addQuizAnswer({ questionIndex: i, selectedAnswer: -1 });
+          }
         }
-        return prev - 1;
-      });
+        setQuizCompleted(true);
+        navigate('/results');
+      }
     }, 1000);
     return () => clearInterval(timer);
-  }, [showFeedback, quizCompleted, currentQuestionIndex, questions.length]);
+  }, [showFeedback, quizCompleted, questions.length, storeQuizStartTime, initialTime, addQuizAnswer, navigate]);
 
   useEffect(() => {
     if (totalTimeLeft <= 0 || initialTime <= 0) return;
@@ -198,8 +227,10 @@ export default function Quiz() {
   };
 
   const handleQuizComplete = () => {
-    for (let i = 0; i < questions.length; i++) {
-      const existing = quizAnswers.find(a => a.questionIndex === i);
+    const qs = questionsRef.current;
+    const answers = quizAnswersRef.current;
+    for (let i = 0; i < qs.length; i++) {
+      const existing = answers.find(a => a.questionIndex === i);
       if (!existing) {
         addQuizAnswer({ questionIndex: i, selectedAnswer: -1 });
       }
