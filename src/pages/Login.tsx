@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db, googleProvider } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useStore } from '../store/useStore';
@@ -11,6 +11,11 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
   const { setUser, darkMode } = useStore();
   const navigate = useNavigate();
 
@@ -82,6 +87,20 @@ export default function Login() {
       }
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetError('');
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setResetSent(true);
+    } catch (err: unknown) {
+      setResetError(err instanceof Error ? err.message : 'Failed to send reset email');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -177,6 +196,15 @@ export default function Login() {
               className={`w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-indigo-500/30 ${inputCls}`}
               required
             />
+            <div className="mt-1.5 text-right">
+              <button
+                type="button"
+                onClick={() => { setShowReset(true); setResetEmail(email); }}
+                className="text-xs text-indigo-500 hover:text-indigo-400 font-medium transition-colors"
+              >
+                Forgot password?
+              </button>
+            </div>
           </div>
           <button
             id="login-submit-btn"
@@ -203,6 +231,60 @@ export default function Login() {
           </Link>
         </p>
       </div>
+
+      {showReset && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className={`mx-4 p-6 rounded-xl shadow-xl max-w-sm w-full ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+            <h3 className="text-lg font-bold mb-2">Reset Password</h3>
+            {resetSent ? (
+              <>
+                <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Check your email at <strong>{resetEmail}</strong> for a link to reset your password.
+                </p>
+                <button
+                  onClick={() => { setShowReset(false); setResetSent(false); setResetEmail(''); }}
+                  className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
+                >
+                  Done
+                </button>
+              </>
+            ) : (
+              <form onSubmit={handleResetPassword}>
+                <p className={`mb-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Enter your email address and we'll send you a link to reset your password.
+                </p>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className={`w-full px-4 py-3 border rounded-xl text-sm outline-none mb-4 transition-all focus:ring-2 focus:ring-indigo-500/30 ${inputCls}`}
+                  required
+                />
+                {resetError && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-500 text-sm rounded-xl">{resetError}</div>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setShowReset(false); setResetError(''); }}
+                    className="flex-1 py-3 rounded-xl bg-gray-600 text-white font-semibold hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  >
+                    {resetLoading ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

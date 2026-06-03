@@ -4,6 +4,7 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
 import { QuestionSkeleton, Skeleton } from '../components/Skeleton';
+import { shuffle } from '../lib/shuffle';
 
 
 
@@ -21,6 +22,8 @@ export default function Quiz() {
   const [cooldownBlocked, setCooldownBlocked] = useState(false);
   const [cooldownMessage, setCooldownMessage] = useState('');
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [fetchError, setFetchError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const { darkMode, user, startQuiz, addQuizAnswer, updateQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode, quizAnswers } = useStore();
   const storeQuizStartTime = useStore((s) => s.quizStartTime);
   const storeQuizTime = useStore((s) => s.quizTime);
@@ -127,11 +130,11 @@ export default function Quiz() {
         })) as Question[];
 
         const orderedQuestions = settings.shuffleQuestions
-          ? [...fetchedQuestions].sort(() => Math.random() - 0.5)
+          ? shuffle(fetchedQuestions)
           : [...fetchedQuestions];
         const shuffledQuestionsWithOptions = orderedQuestions.map((q) => {
           const correctOptionText = q.options[q.correctAnswer];
-          const shuffledOpts = [...q.options].sort(() => Math.random() - 0.5);
+          const shuffledOpts = shuffle(q.options);
           const newCorrectAnswerIndex = shuffledOpts.indexOf(correctOptionText);
           return {
             ...q,
@@ -145,12 +148,13 @@ export default function Quiz() {
         startQuiz();
       } catch (error) {
         console.error('Error fetching questions:', error);
+        setFetchError('Failed to load the quiz. Please check your connection and try again.');
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [categoryId, user]);
+  }, [categoryId, user, retryCount]);
 
   useEffect(() => {
     if (showFeedback || quizCompleted || questions.length === 0 || storeQuizStartTime === 0) return;
@@ -303,6 +307,24 @@ export default function Quiz() {
           <button onClick={() => navigate('/home')}
             className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
             Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className={`max-w-md mx-4 p-8 rounded-xl shadow-lg text-center ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+          <div className="text-5xl mb-4">📡</div>
+          <h2 className="text-2xl font-bold mb-4">Connection Error</h2>
+          <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{fetchError}</p>
+          <button
+            onClick={() => { setFetchError(''); setRetryCount((c) => c + 1); }}
+            className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Try Again
           </button>
         </div>
       </div>

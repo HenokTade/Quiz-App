@@ -5,6 +5,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import { useStore, User } from './store/useStore';
 import Navbar from './components/Navbar';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
@@ -58,18 +59,20 @@ function AppContent() {
   return (
     <div className={darkMode ? 'dark' : ''}>
       <Navbar />
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-        <Route path="/quiz/:categoryId" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
-        <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
-        <Route path="/result/:resultId" element={<ProtectedRoute><ResultDetail /></ProtectedRoute>} />
-        <Route path="/questions" element={<ProtectedRoute><QuestionsManager /></ProtectedRoute>} />
-        <Route path="/admin" element={<Navigate to="/dashboard" />} />
-        <Route path="/" element={<Navigate to="/login" />} />
-      </Routes>
+      <ErrorBoundary darkMode={darkMode}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/quiz/:categoryId" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
+          <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
+          <Route path="/result/:resultId" element={<ProtectedRoute><ResultDetail /></ProtectedRoute>} />
+          <Route path="/questions" element={<ProtectedRoute><QuestionsManager /></ProtectedRoute>} />
+          <Route path="/admin" element={<Navigate to="/dashboard" />} />
+          <Route path="/" element={<Navigate to="/login" />} />
+        </Routes>
+      </ErrorBoundary>
     </div>
   );
 }
