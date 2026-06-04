@@ -168,7 +168,17 @@ export default function ResultDetail() {
                       {answer.questionIndex + 1}. {answer.question || 'Question not available'}
                     </p>
                     {notAnswered ? (
-                      <p className="text-gray-500">— Not answered</p>
+                      <>
+                        <p className="text-gray-500">— Not answered</p>
+                        <p className="text-green-400 mt-1">
+                          Correct: {correctAnswer}
+                        </p>
+                        {answer.explanation && (
+                          <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            💡 {answer.explanation}
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <>
                         <p className={answer.isCorrect ? 'text-green-400' : 'text-red-400'}>

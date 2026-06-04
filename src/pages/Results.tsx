@@ -106,12 +106,12 @@ export default function Results() {
                     <p className={notAnswered ? 'text-gray-500' : (isCorrect ? 'text-green-400' : 'text-red-400')}>
                       {notAnswered ? '— Not answered' : (isCorrect ? '✓ Correct' : `✗ Your answer: ${question.options[answer!.selectedAnswer]}`)}
                     </p>
-                    {!isCorrect && !notAnswered && (
+                    {(!isCorrect || notAnswered) && (
                       <p className="text-green-400 mt-1">
                         Correct: {question.options[question.correctAnswer]}
                       </p>
                     )}
-                    {!notAnswered && question.explanation && (
+                    {question.explanation && (
                       <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         💡 {question.explanation}
                       </p>
