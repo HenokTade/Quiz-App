@@ -435,7 +435,7 @@ export default function Quiz() {
               onClick={handleNextQuestion}
               className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
             >
-              {currentQuestionIndex < questions.length - 1 ? 'Skip →' : 'Finish'}
+              {currentQuestionIndex < questions.length - 1 ? 'Skip →' : 'Submit'}
             </button>
           </div>
           <h2 className={`text-xl font-semibold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -489,7 +489,7 @@ export default function Quiz() {
               disabled={feedbackMode === 'after_each' && selectedAnswer === null}
               className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {feedbackMode === 'after_each' ? 'Submit Answer' : 'Next →'}
+              {feedbackMode === 'after_each' ? 'Submit Answer' : currentQuestionIndex < questions.length - 1 ? 'Next →' : 'Submit'}
             </button>
           ) : (
             <button
