@@ -170,7 +170,7 @@ export default function ResultDetail() {
                     {notAnswered ? (
                       <>
                         <p className="text-gray-500">— Not answered</p>
-                        <p className="text-green-400 mt-1">
+                        <p className="text-indigo-400 mt-1">
                           Correct: {correctAnswer}
                         </p>
                         {answer.explanation && (
