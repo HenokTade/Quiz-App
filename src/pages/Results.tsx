@@ -38,18 +38,19 @@ export default function Results() {
             score: correct,
             totalQuestions: currentQuiz.length,
             date: new Date().toISOString(),
-            answers: quizAnswers.map(a => {
-              const q = currentQuiz[a.questionIndex];
+            answers: currentQuiz.map((q, i) => {
+              const a = quizAnswers.find(ans => ans.questionIndex === i);
+              const answered = a !== undefined && a.selectedAnswer !== -1;
               return {
-                questionIndex: a.questionIndex,
-                selectedAnswer: a.selectedAnswer,
-                isCorrect: q?.correctAnswer === a.selectedAnswer,
-                selectedText: a.selectedAnswer >= 0 ? q?.options[a.selectedAnswer] || '' : '',
-                correctText: q?.options[q?.correctAnswer] || '',
-                question: q?.question || '',
-                options: q?.options || [],
-                correctAnswer: q?.correctAnswer ?? -1,
-                explanation: q?.explanation || '',
+                questionIndex: i,
+                selectedAnswer: answered ? a!.selectedAnswer : -1,
+                isCorrect: answered ? q.correctAnswer === a!.selectedAnswer : false,
+                selectedText: answered ? q.options[a!.selectedAnswer] || '' : '',
+                correctText: q.options[q.correctAnswer] || '',
+                question: q.question || '',
+                options: q.options || [],
+                correctAnswer: q.correctAnswer ?? -1,
+                explanation: q.explanation || '',
               };
             })
           });
