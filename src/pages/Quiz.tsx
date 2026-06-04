@@ -22,6 +22,7 @@ export default function Quiz() {
   const [cooldownBlocked, setCooldownBlocked] = useState(false);
   const [cooldownMessage, setCooldownMessage] = useState('');
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [retryCount, setRetryCount] = useState(0);
   const { darkMode, user, startQuiz, addQuizAnswer, updateQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode, quizAnswers } = useStore();
@@ -242,9 +243,18 @@ export default function Quiz() {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      setQuizCompleted(true);
-      navigate('/results');
+      setShowSubmitConfirm(true);
     }
+  };
+
+  const handleConfirmSubmit = () => {
+    setShowSubmitConfirm(false);
+    setQuizCompleted(true);
+    navigate('/results');
+  };
+
+  const handleCancelSubmit = () => {
+    setShowSubmitConfirm(false);
   };
 
   const handleSubmitAnswer = () => {
@@ -491,6 +501,34 @@ export default function Quiz() {
           )}
         </div>
       </div>
+
+      {showSubmitConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className={`mx-4 p-6 rounded-xl shadow-xl max-w-sm w-full ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+            <h3 className="text-lg font-bold mb-2">Submit Quiz?</h3>
+            <p className={`mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              You answered {quizAnswers.filter(a => a.selectedAnswer !== -1).length} of {questions.length} questions.
+            </p>
+            <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Unanswered questions will be marked as incorrect. Are you sure you want to submit?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleCancelSubmit}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Review
+              </button>
+              <button
+                onClick={handleConfirmSubmit}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showLeaveConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
