@@ -25,7 +25,7 @@ export default function Quiz() {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [retryCount, setRetryCount] = useState(0);
-  const { darkMode, user, startQuiz, addQuizAnswer, updateQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode, quizAnswers } = useStore();
+  const { darkMode, user, startQuiz, addQuizAnswer, updateQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode, quizAnswers, bookmarkedQuestions, toggleBookmark } = useStore();
   const storeQuizStartTime = useStore((s) => s.quizStartTime);
   const storeQuizTime = useStore((s) => s.quizTime);
   const navigate = useNavigate();
@@ -134,6 +134,9 @@ export default function Quiz() {
           ? shuffle(fetchedQuestions)
           : [...fetchedQuestions];
         const shuffledQuestionsWithOptions = orderedQuestions.map((q) => {
+          if (!settings.shuffleQuestions) {
+            return { ...q };
+          }
           const correctOptionText = q.options[q.correctAnswer];
           const shuffledOpts = shuffle(q.options);
           const newCorrectAnswerIndex = shuffledOpts.indexOf(correctOptionText);
@@ -398,23 +401,30 @@ export default function Quiz() {
             const answer = quizAnswers.find(a => a.questionIndex === idx);
             const isAnswered = answer !== undefined && answer.selectedAnswer !== -1;
             const isCurrent = idx === currentQuestionIndex;
+            const isBookmarked = bookmarkedQuestions.includes(idx);
 
             let btnClass = isCurrent
               ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-1 scale-110'
               : isAnswered
                 ? 'bg-green-500 text-white hover:bg-green-600'
-                : darkMode
-                  ? 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300';
+                : isBookmarked
+                  ? 'bg-amber-400 text-gray-900 hover:bg-amber-500'
+                  : darkMode
+                    ? 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300';
 
             return (
               <button
                 key={idx}
                 onClick={() => handleJumpToQuestion(idx)}
                 className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-xs font-medium transition-all ${btnClass}`}
-                title={`Go to question ${idx + 1}`}
+                title={`Go to question ${idx + 1}${isBookmarked ? ' (bookmarked)' : ''}`}
               >
-                {idx + 1}
+                {isBookmarked && !isCurrent ? (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3 sm:w-3.5 sm:h-3.5 mx-auto">
+                    <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+                  </svg>
+                ) : idx + 1}
               </button>
             );
           })}
@@ -435,12 +445,35 @@ export default function Quiz() {
               onClick={handleNextQuestion}
               className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
             >
-              {currentQuestionIndex < questions.length - 1 ? 'Skip →' : 'Submit'}
+              {currentQuestionIndex < questions.length - 1 ? 'Next →' : 'Submit'}
             </button>
           </div>
-          <h2 className={`text-xl font-semibold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            {currentQuestion?.question}
-          </h2>
+          <div className="flex items-start gap-3 mb-6">
+            <h2 className={`text-xl font-semibold flex-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              {currentQuestion?.question}
+            </h2>
+            <button
+              onClick={() => toggleBookmark(currentQuestionIndex)}
+              className={`shrink-0 p-2 rounded-lg transition-colors ${
+                bookmarkedQuestions.includes(currentQuestionIndex)
+                  ? 'text-amber-400 hover:text-amber-500'
+                  : darkMode
+                    ? 'text-gray-500 hover:text-gray-300'
+                    : 'text-gray-400 hover:text-gray-600'
+              }`}
+              title={bookmarkedQuestions.includes(currentQuestionIndex) ? 'Remove bookmark' : 'Bookmark this question'}
+            >
+              {bookmarkedQuestions.includes(currentQuestionIndex) ? (
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                  <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
+                  <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+                </svg>
+              )}
+            </button>
+          </div>
 
           <div className="space-y-3">
             {currentOptions.map((option, index) => {

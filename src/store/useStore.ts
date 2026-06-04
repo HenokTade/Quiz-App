@@ -48,6 +48,7 @@ interface AppState {
   currentCategoryId: string;
   currentCategoryName: string;
   feedbackMode: FeedbackMode;
+  bookmarkedQuestions: number[];
   setUser: (user: User | null) => void;
   setDarkMode: (dark: boolean) => void;
   setCurrentQuiz: (questions: Question[]) => void;
@@ -58,6 +59,7 @@ interface AppState {
   resetQuiz: () => void;
   setCurrentCategory: (id: string, name: string) => void;
   setFeedbackMode: (value: FeedbackMode) => void;
+  toggleBookmark: (questionIndex: number) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -73,6 +75,7 @@ export const useStore = create<AppState>()(
       currentCategoryId: '',
       currentCategoryName: '',
       feedbackMode: 'after_each',
+      bookmarkedQuestions: [],
       setUser: (user) => set({ user }),
       setDarkMode: (darkMode) => set({ darkMode }),
       setCurrentQuiz: (currentQuiz) => set({ currentQuiz }),
@@ -90,9 +93,17 @@ export const useStore = create<AppState>()(
         return { quizAnswers: [...state.quizAnswers, answer] };
       }),
       startQuiz: () => set({ quizStartTime: Date.now(), currentQuestionIndex: 0, quizAnswers: [] }),
-      resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, quizTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each' }),
+      resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, quizTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each', bookmarkedQuestions: [] }),
       setCurrentCategory: (id, name) => set({ currentCategoryId: id, currentCategoryName: name }),
       setFeedbackMode: (value) => set({ feedbackMode: value }),
+      toggleBookmark: (questionIndex) => set((state) => {
+        const exists = state.bookmarkedQuestions.includes(questionIndex);
+        return {
+          bookmarkedQuestions: exists
+            ? state.bookmarkedQuestions.filter((i) => i !== questionIndex)
+            : [...state.bookmarkedQuestions, questionIndex]
+        };
+      }),
     }),
     {
       name: 'quiz-app-store',
@@ -106,6 +117,7 @@ export const useStore = create<AppState>()(
         currentCategoryId: state.currentCategoryId,
         currentCategoryName: state.currentCategoryName,
         feedbackMode: state.feedbackMode,
+        bookmarkedQuestions: state.bookmarkedQuestions,
       }),
     }
   )
