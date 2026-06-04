@@ -46,6 +46,10 @@ export default function Results() {
                 isCorrect: q?.correctAnswer === a.selectedAnswer,
                 selectedText: a.selectedAnswer >= 0 ? q?.options[a.selectedAnswer] || '' : '',
                 correctText: q?.options[q?.correctAnswer] || '',
+                question: q?.question || '',
+                options: q?.options || [],
+                correctAnswer: q?.correctAnswer ?? -1,
+                explanation: q?.explanation || '',
               };
             })
           });

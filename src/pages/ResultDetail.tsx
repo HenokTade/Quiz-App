@@ -4,6 +4,18 @@ import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firesto
 import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
 
+interface AnswerData {
+  questionIndex: number;
+  selectedAnswer: number;
+  isCorrect: boolean;
+  selectedText?: string;
+  correctText?: string;
+  question?: string;
+  options?: string[];
+  correctAnswer?: number;
+  explanation?: string;
+}
+
 export default function ResultDetail() {
   const { resultId } = useParams<{ resultId: string }>();
   const { user, darkMode } = useStore();
@@ -15,9 +27,8 @@ export default function ResultDetail() {
     totalQuestions: number;
     category: string;
     date: string;
-    answers: { questionIndex: number; selectedAnswer: number; isCorrect: boolean; selectedText?: string; correctText?: string }[];
+    answers: AnswerData[];
   } | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -35,22 +46,50 @@ export default function ResultDetail() {
           setLoading(false);
           return;
         }
+
+        const storedAnswers: AnswerData[] = (data.answers || []).map((a: any) => ({
+          questionIndex: a.questionIndex,
+          selectedAnswer: a.selectedAnswer,
+          isCorrect: a.isCorrect,
+          selectedText: a.selectedText,
+          correctText: a.correctText,
+          question: a.question,
+          options: a.options,
+          correctAnswer: a.correctAnswer,
+          explanation: a.explanation,
+        }));
+
+        const hasFullData = storedAnswers.length > 0 && storedAnswers[0].question;
+
+        if (!hasFullData && storedAnswers.length > 0) {
+          const questionsSnap = await getDocs(
+            query(collection(db, 'questions'), where('category', '==', data.categoryId || data.category))
+          );
+          const fetchedQuestions: Question[] = questionsSnap.docs.map((d) => ({
+            id: d.id,
+            ...d.data()
+          })) as Question[];
+
+          const enriched = storedAnswers.map((a) => {
+            const q = fetchedQuestions[a.questionIndex] || fetchedQuestions[0];
+            return {
+              ...a,
+              question: q?.question || '',
+              options: q?.options || [],
+              correctAnswer: q?.correctAnswer ?? -1,
+              explanation: q?.explanation || '',
+            };
+          });
+          storedAnswers.splice(0, storedAnswers.length, ...enriched);
+        }
+
         setResult({
           score: data.score,
           totalQuestions: data.totalQuestions,
           category: data.category,
           date: data.date,
-          answers: data.answers || [],
+          answers: storedAnswers,
         });
-
-        const questionsSnap = await getDocs(
-          query(collection(db, 'questions'), where('category', '==', data.categoryId || data.category))
-        );
-        const fetchedQuestions: Question[] = questionsSnap.docs.map((d) => ({
-          id: d.id,
-          ...d.data()
-        })) as Question[];
-        setQuestions(fetchedQuestions);
       } catch (err) {
         setError('Failed to load result');
       } finally {
@@ -115,39 +154,41 @@ export default function ResultDetail() {
             Review Answers
           </h2>
           <div className="space-y-4">
-            {result.answers.map((answer, index) => {
-              const question = questions[index];
-              const notAnswered = answer.selectedAnswer === -1;
-              const correctAnswer = answer.correctText || (question ? question.options[question.correctAnswer] : '');
-              const hasText = answer.selectedText !== undefined;
-              const userAnswer = hasText ? answer.selectedText : '';
-              return (
-                <div key={index} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <p className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {index + 1}. {question?.question || 'Question not available'}
-                  </p>
-                  {notAnswered ? (
-                    <p className="text-gray-500">— Not answered</p>
-                  ) : (
-                    <>
-                      <p className={answer.isCorrect ? 'text-green-400' : 'text-red-400'}>
-                        {answer.isCorrect ? '✓ Correct' : hasText ? `✗ Your answer: ${userAnswer}` : '✗ Incorrect'}
-                      </p>
-                      {!answer.isCorrect && (
-                        <p className="text-green-400 mt-1">
-                          Correct: {correctAnswer}
-                        </p>
-                      )}
-                    </>
-                  )}
-                  {question?.explanation && (
-                    <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      💡 {question.explanation}
+            {result.answers
+              .slice()
+              .sort((a, b) => a.questionIndex - b.questionIndex)
+              .map((answer) => {
+                const notAnswered = answer.selectedAnswer === -1;
+                const hasText = answer.selectedText !== undefined;
+                const correctAnswer = answer.correctText || (answer.options ? answer.options[answer.correctAnswer ?? -1] : '');
+                const userAnswer = hasText ? answer.selectedText : '';
+                return (
+                  <div key={answer.questionIndex} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <p className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {answer.questionIndex + 1}. {answer.question || 'Question not available'}
                     </p>
-                  )}
-                </div>
-              );
-            })}
+                    {notAnswered ? (
+                      <p className="text-gray-500">— Not answered</p>
+                    ) : (
+                      <>
+                        <p className={answer.isCorrect ? 'text-green-400' : 'text-red-400'}>
+                          {answer.isCorrect ? '✓ Correct' : hasText ? `✗ Your answer: ${userAnswer}` : '✗ Incorrect'}
+                        </p>
+                        {!answer.isCorrect && (
+                          <p className="text-green-400 mt-1">
+                            Correct: {correctAnswer}
+                          </p>
+                        )}
+                      </>
+                    )}
+                    {answer.explanation && (
+                      <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        💡 {answer.explanation}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
           </div>
         </div>
       </div>
