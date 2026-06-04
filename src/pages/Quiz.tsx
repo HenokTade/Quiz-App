@@ -506,11 +506,8 @@ export default function Quiz() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className={`mx-4 p-6 rounded-xl shadow-xl max-w-sm w-full ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
             <h3 className="text-lg font-bold mb-2">Submit Quiz?</h3>
-            <p className={`mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              You answered {quizAnswers.filter(a => a.selectedAnswer !== -1).length} of {questions.length} questions.
-            </p>
             <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Unanswered questions will be marked as incorrect. Are you sure you want to submit?
+              Review your answers before submitting. Unanswered questions will be marked as incorrect.
             </p>
             <div className="flex gap-3 justify-end">
               <button
