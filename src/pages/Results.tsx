@@ -38,11 +38,16 @@ export default function Results() {
             score: correct,
             totalQuestions: currentQuiz.length,
             date: new Date().toISOString(),
-            answers: quizAnswers.map(a => ({
-              questionIndex: a.questionIndex,
-              selectedAnswer: a.selectedAnswer,
-              isCorrect: currentQuiz[a.questionIndex]?.correctAnswer === a.selectedAnswer
-            }))
+            answers: quizAnswers.map(a => {
+              const q = currentQuiz[a.questionIndex];
+              return {
+                questionIndex: a.questionIndex,
+                selectedAnswer: a.selectedAnswer,
+                isCorrect: q?.correctAnswer === a.selectedAnswer,
+                selectedText: a.selectedAnswer >= 0 ? q?.options[a.selectedAnswer] || '' : '',
+                correctText: q?.options[q?.correctAnswer] || '',
+              };
+            })
           });
         } catch (error) {
           console.error("Error saving result:", error);

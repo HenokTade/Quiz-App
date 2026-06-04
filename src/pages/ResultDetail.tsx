@@ -15,7 +15,7 @@ export default function ResultDetail() {
     totalQuestions: number;
     category: string;
     date: string;
-    answers: { questionIndex: number; selectedAnswer: number; isCorrect: boolean }[];
+    answers: { questionIndex: number; selectedAnswer: number; isCorrect: boolean; selectedText?: string; correctText?: string }[];
   } | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
 
@@ -118,6 +118,8 @@ export default function ResultDetail() {
             {result.answers.map((answer, index) => {
               const question = questions[index];
               const notAnswered = answer.selectedAnswer === -1;
+              const userAnswer = answer.selectedText || (question ? question.options[answer.selectedAnswer] : 'Unknown');
+              const correctAnswer = answer.correctText || (question ? question.options[question.correctAnswer] : '');
               return (
                 <div key={index} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                   <p className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -128,11 +130,11 @@ export default function ResultDetail() {
                   ) : (
                     <>
                       <p className={answer.isCorrect ? 'text-green-400' : 'text-red-400'}>
-                        {answer.isCorrect ? '✓ Correct' : `✗ Your answer: ${question?.options[answer.selectedAnswer] || 'Unknown'}`}
+                        {answer.isCorrect ? '✓ Correct' : `✗ Your answer: ${userAnswer}`}
                       </p>
-                      {!answer.isCorrect && question && (
+                      {!answer.isCorrect && (
                         <p className="text-green-400 mt-1">
-                          Correct: {question.options[question.correctAnswer]}
+                          Correct: {correctAnswer}
                         </p>
                       )}
                     </>
