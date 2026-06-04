@@ -181,7 +181,7 @@ export default function ResultDetail() {
                         )}
                       </>
                     )}
-                    {answer.explanation && (
+                    {!notAnswered && answer.explanation && (
                       <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         💡 {answer.explanation}
                       </p>

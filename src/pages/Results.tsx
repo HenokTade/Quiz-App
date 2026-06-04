@@ -111,9 +111,11 @@ export default function Results() {
                         Correct: {question.options[question.correctAnswer]}
                       </p>
                     )}
-                    <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      💡 {question.explanation}
-                    </p>
+                    {!notAnswered && question.explanation && (
+                      <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        💡 {question.explanation}
+                      </p>
+                    )}
                   </div>
                 );
               })}
