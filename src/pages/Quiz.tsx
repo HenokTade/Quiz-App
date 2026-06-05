@@ -82,7 +82,7 @@ export default function Quiz() {
 
         useStore.setState({ quizTime: totalTimeSeconds });
 
-        if (user && settings.retakeMode !== 'unlimited') {
+        if (user && user.role !== 'admin' && settings.retakeMode !== 'unlimited') {
           const resultsQuery = query(
             collection(db, 'results'),
             where('userId', '==', user.uid),
