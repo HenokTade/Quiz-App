@@ -56,7 +56,7 @@ export default function Quiz() {
 
         const state = useStore.getState();
 
-        if (state.quizStartTime > 0 && state.currentCategoryId === categoryId && state.currentQuiz.length > 0 && state.quizTime > 0) {
+        if (state.quizStartTime > 0 && !state.quizFinished && state.currentCategoryId === categoryId && state.currentQuiz.length > 0 && state.quizTime > 0) {
           setQuestions(state.currentQuiz);
           setInitialTime(state.quizTime);
           const elapsed = Math.floor((Date.now() - state.quizStartTime) / 1000);
@@ -168,6 +168,7 @@ export default function Quiz() {
       setTotalTimeLeft(remaining);
       if (remaining <= 0) {
         setQuizCompleted(true);
+        useStore.getState().finishQuiz();
         navigate('/results');
       }
     }, 1000);
@@ -253,6 +254,7 @@ export default function Quiz() {
   const handleConfirmSubmit = () => {
     setShowSubmitConfirm(false);
     setQuizCompleted(true);
+    useStore.getState().finishQuiz();
     navigate('/results');
   };
 
