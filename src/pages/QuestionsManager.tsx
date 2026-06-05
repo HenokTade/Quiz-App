@@ -55,7 +55,9 @@ export default function QuestionsManager() {
 
   const fetchQuestions = async () => {
     const snapshot = await getDocs(collection(db, 'questions'));
-    setQuestions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Question[]);
+    const qs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Question[];
+    qs.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+    setQuestions(qs);
   };
 
   const filteredQuestions = questions.filter(q => {
@@ -110,7 +112,8 @@ export default function QuestionsManager() {
       options: [newQuestion.option1, newQuestion.option2, newQuestion.option3, newQuestion.option4],
       correctAnswer: newQuestion.correctAnswer,
       explanation: newQuestion.explanation,
-      category: newQuestion.category
+      category: newQuestion.category,
+      createdAt: Date.now()
     });
     setNewQuestion({ question: '', option1: '', option2: '', option3: '', option4: '', correctAnswer: 0, explanation: '', category: '' });
     fetchQuestions();
@@ -180,7 +183,8 @@ export default function QuestionsManager() {
           await addDoc(collection(db, 'questions'), {
             question: q.question_text, options: q.choices,
             correctAnswer: q.choices.indexOf(q.correct_answer) >= 0 ? q.choices.indexOf(q.correct_answer) : 0,
-            explanation: q.explanation || '', category: bulkCategory
+            explanation: q.explanation || '', category: bulkCategory,
+            createdAt: Date.now()
           });
           qAdded++;
         }

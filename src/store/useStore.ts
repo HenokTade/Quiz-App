@@ -18,6 +18,7 @@ export interface Question {
   correctAnswer: number;
   explanation: string;
   category: string;
+  createdAt?: number;
 }
 
 export interface QuizResult {

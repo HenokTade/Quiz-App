@@ -132,7 +132,7 @@ export default function Quiz() {
 
         const orderedQuestions = settings.shuffleQuestions
           ? shuffle(fetchedQuestions)
-          : [...fetchedQuestions];
+          : [...fetchedQuestions].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
         const shuffledQuestionsWithOptions = orderedQuestions.map((q) => {
           if (!settings.shuffleQuestions) {
             return { ...q };
