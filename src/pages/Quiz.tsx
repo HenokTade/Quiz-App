@@ -82,42 +82,44 @@ export default function Quiz() {
 
         useStore.setState({ quizTime: totalTimeSeconds });
 
-        if (user && user.role !== 'admin' && settings.retakeMode !== 'unlimited') {
-          const resultsQuery = query(
-            collection(db, 'results'),
-            where('userId', '==', user.uid),
-            where('categoryId', '==', categoryId)
-          );
-          const resultsSnap = await getDocs(resultsQuery);
+        if (user && settings.retakeMode !== 'unlimited') {
+          if (user.role !== 'admin') {
+            const resultsQuery = query(
+              collection(db, 'results'),
+              where('userId', '==', user.uid),
+              where('categoryId', '==', categoryId)
+            );
+            const resultsSnap = await getDocs(resultsQuery);
 
-          if (!resultsSnap.empty) {
-            if (settings.retakeMode === 'once') {
-              setCooldownBlocked(true);
-              setCooldownMessage('This quiz can only be taken once.');
-              setLoading(false);
-              return;
-            }
-
-            if (settings.retakeMode === 'cooldown' && settings.retakeCooldown > 0) {
-              let lastTimestamp = 0;
-              for (const d of resultsSnap.docs) {
-                const ts = new Date(d.data().date).getTime();
-                if (ts > lastTimestamp) lastTimestamp = ts;
+            if (!resultsSnap.empty) {
+              if (settings.retakeMode === 'once') {
+                setCooldownBlocked(true);
+                setCooldownMessage('This quiz can only be taken once.');
+                setLoading(false);
+                return;
               }
-              const lastDate = lastTimestamp > 0 ? new Date(lastTimestamp) : null;
-              if (lastDate) {
-                const cooldownMs = settings.retakeCooldown * 60 * 60 * 1000;
-                const availableDate = new Date(lastDate.getTime() + cooldownMs);
-                if (availableDate > new Date()) {
-                  const hoursLeft = Math.ceil((availableDate.getTime() - Date.now()) / (60 * 60 * 1000));
-                  setCooldownBlocked(true);
-                  setCooldownMessage(
-                    hoursLeft >= 1
-                      ? `You can retake this quiz in approximately ${hoursLeft} hour${hoursLeft > 1 ? 's' : ''}`
-                      : 'You can retake this quiz in less than an hour'
-                  );
-                  setLoading(false);
-                  return;
+
+              if (settings.retakeMode === 'cooldown' && settings.retakeCooldown > 0) {
+                let lastTimestamp = 0;
+                for (const d of resultsSnap.docs) {
+                  const ts = new Date(d.data().date).getTime();
+                  if (ts > lastTimestamp) lastTimestamp = ts;
+                }
+                const lastDate = lastTimestamp > 0 ? new Date(lastTimestamp) : null;
+                if (lastDate) {
+                  const cooldownMs = settings.retakeCooldown * 60 * 60 * 1000;
+                  const availableDate = new Date(lastDate.getTime() + cooldownMs);
+                  if (availableDate > new Date()) {
+                    const hoursLeft = Math.ceil((availableDate.getTime() - Date.now()) / (60 * 60 * 1000));
+                    setCooldownBlocked(true);
+                    setCooldownMessage(
+                      hoursLeft >= 1
+                        ? `You can retake this quiz in approximately ${hoursLeft} hour${hoursLeft > 1 ? 's' : ''}`
+                        : 'You can retake this quiz in less than an hour'
+                    );
+                    setLoading(false);
+                    return;
+                  }
                 }
               }
             }
