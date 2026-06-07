@@ -57,12 +57,14 @@ export default function Quiz() {
         const state = useStore.getState();
 
         if (state.quizStartTime > 0 && !state.quizFinished && state.currentCategoryId === categoryId && state.currentQuiz.length > 0 && state.quizTime > 0) {
-          setQuestions(state.currentQuiz);
-          setInitialTime(state.quizTime);
           const elapsed = Math.floor((Date.now() - state.quizStartTime) / 1000);
-          setTotalTimeLeft(Math.max(0, state.quizTime - elapsed));
-          setLoading(false);
-          return;
+          if (elapsed < state.quizTime) {
+            setQuestions(state.currentQuiz);
+            setInitialTime(state.quizTime);
+            setTotalTimeLeft(state.quizTime - elapsed);
+            setLoading(false);
+            return;
+          }
         }
 
         const settings = {
