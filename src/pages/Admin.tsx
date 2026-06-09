@@ -214,6 +214,7 @@ export default function Admin() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className={`border-b ${darkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
+                      <th className="text-left py-3 px-2 font-medium w-12">#</th>
                       <th className="text-left py-3 px-2 font-medium">User</th>
                       <th className="text-left py-3 px-2 font-medium">Category</th>
                       <th className="text-left py-3 px-2 font-medium">Score</th>
@@ -222,11 +223,12 @@ export default function Admin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredResults.map(r => {
+                    {filteredResults.map((r, i) => {
                       const userDoc = users.find(u => u.id === r.userId);
                       const percentage = Math.round((r.score / r.totalQuestions) * 100);
                       return (
                         <tr key={r.id} className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+                          <td className={`py-3 px-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{i + 1}</td>
                           <td className={`py-3 px-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             {userDoc?.displayName || userDoc?.email || r.userId?.slice(0, 8)}
                           </td>
@@ -240,7 +242,10 @@ export default function Admin() {
                             {new Date(r.date).toLocaleDateString()} {new Date(r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </td>
                           <td className="py-3 px-2 text-right">
-                            <button onClick={() => handleDeleteUserResult(r.id)} className="text-red-500 hover:text-red-400 text-xs font-medium">Delete</button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => navigate(`/result/${r.id}`)} className="text-indigo-500 hover:text-indigo-400 text-xs font-medium">View</button>
+                              <button onClick={() => handleDeleteUserResult(r.id)} className="text-red-500 hover:text-red-400 text-xs font-medium">Delete</button>
+                            </div>
                           </td>
                         </tr>
                       );

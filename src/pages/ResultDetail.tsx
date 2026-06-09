@@ -161,7 +161,9 @@ export default function ResultDetail() {
                 const notAnswered = answer.selectedAnswer === -1;
                 const hasText = answer.selectedText !== undefined;
                 const correctAnswer = answer.correctText || (answer.options ? answer.options[answer.correctAnswer ?? -1] : '');
+                const correctLetter = answer.options ? String.fromCharCode(65 + (answer.correctAnswer ?? 0)) : '';
                 const userAnswer = hasText ? answer.selectedText : '';
+                const userLetter = !notAnswered && answer.options ? String.fromCharCode(65 + answer.selectedAnswer) : '';
                 return (
                   <div key={answer.questionIndex} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                     <p className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -171,7 +173,7 @@ export default function ResultDetail() {
                       <>
                         <p className="text-gray-500">— Not answered</p>
                         <p className="text-indigo-400 mt-1">
-                          Correct: {correctAnswer}
+                          Correct: {correctLetter}. {correctAnswer}
                         </p>
                         {answer.explanation && (
                           <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -182,11 +184,11 @@ export default function ResultDetail() {
                     ) : (
                       <>
                         <p className={answer.isCorrect ? 'text-green-400' : 'text-red-400'}>
-                          {answer.isCorrect ? '✓ Correct' : hasText ? `✗ Your answer: ${userAnswer}` : '✗ Incorrect'}
+                          {answer.isCorrect ? '✓ Correct' : hasText ? `✗ Your answer: ${userLetter}. ${userAnswer}` : '✗ Incorrect'}
                         </p>
                         {!answer.isCorrect && (
                           <p className="text-green-400 mt-1">
-                            Correct: {correctAnswer}
+                            Correct: {correctLetter}. {correctAnswer}
                           </p>
                         )}
                         {answer.explanation && (

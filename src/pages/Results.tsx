@@ -98,22 +98,24 @@ export default function Results() {
                 const answer = quizAnswers.find(a => a.questionIndex === index);
                 const notAnswered = !answer || answer.selectedAnswer === -1;
                 const isCorrect = !notAnswered && answer!.selectedAnswer === question.correctAnswer;
+                const userLetter = !notAnswered ? String.fromCharCode(65 + answer!.selectedAnswer) : '';
+                const correctLetter = String.fromCharCode(65 + question.correctAnswer);
                 return (
                   <div key={index} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                     <p className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                       {index + 1}. {question.question}
                     </p>
                     <p className={notAnswered ? 'text-gray-500' : (isCorrect ? 'text-green-400' : 'text-red-400')}>
-                      {notAnswered ? '— Not answered' : (isCorrect ? '✓ Correct' : `✗ Your answer: ${question.options[answer!.selectedAnswer]}`)}
+                      {notAnswered ? '— Not answered' : (isCorrect ? '✓ Correct' : `✗ Your answer: ${userLetter}. ${question.options[answer!.selectedAnswer]}`)}
                     </p>
                     {notAnswered && (
                       <p className="text-indigo-400 mt-1">
-                        Correct: {question.options[question.correctAnswer]}
+                        Correct: {correctLetter}. {question.options[question.correctAnswer]}
                       </p>
                     )}
                     {!isCorrect && !notAnswered && (
                       <p className="text-green-400 mt-1">
-                        Correct: {question.options[question.correctAnswer]}
+                        Correct: {correctLetter}. {question.options[question.correctAnswer]}
                       </p>
                     )}
                     {question.explanation && (
