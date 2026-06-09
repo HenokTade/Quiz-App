@@ -17,6 +17,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'results'>('stats');
   const [resultFilterUser, setResultFilterUser] = useState('');
   const [resultFilterCategory, setResultFilterCategory] = useState('');
+  const [sortMode, setSortMode] = useState<'recent' | 'alpha'>('recent');
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
   const navigate = useNavigate();
@@ -75,9 +76,12 @@ export default function Admin() {
     const matchesCategory = !resultFilterCategory || r.category === resultFilterCategory;
     return matchesUser && matchesCategory;
   }).sort((a, b) => {
-    const nameA = (users.find(u => u.id === a.userId)?.displayName || users.find(u => u.id === a.userId)?.email || '').toLowerCase();
-    const nameB = (users.find(u => u.id === b.userId)?.displayName || users.find(u => u.id === b.userId)?.email || '').toLowerCase();
-    return nameA.localeCompare(nameB);
+    if (sortMode === 'alpha') {
+      const nameA = (users.find(u => u.id === a.userId)?.displayName || users.find(u => u.id === a.userId)?.email || '').toLowerCase();
+      const nameB = (users.find(u => u.id === b.userId)?.displayName || users.find(u => u.id === b.userId)?.email || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    }
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 
   if (!user || user.role !== 'admin') return null;
@@ -198,7 +202,14 @@ export default function Admin() {
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
             <div className="flex items-center justify-between mb-6">
               <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>All Quiz Results ({filteredResults.length})</h2>
-              <div className="flex gap-3 flex-wrap">
+              <div className="flex gap-3 flex-wrap items-center">
+                <button onClick={() => setSortMode(prev => prev === 'recent' ? 'alpha' : 'recent')}
+                  className={`text-sm px-3 py-2 rounded-lg border transition-colors ${sortMode === 'alpha'
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : darkMode ? 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                  }`}>
+                  {sortMode === 'alpha' ? 'A → Z' : 'Recent'}
+                </button>
                 <select value={resultFilterUser} onChange={e => setResultFilterUser(e.target.value)}
                   className={`text-sm p-2 rounded-lg border ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}>
                   <option value="">All Users</option>
