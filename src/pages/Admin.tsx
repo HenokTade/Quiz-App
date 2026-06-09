@@ -74,7 +74,11 @@ export default function Admin() {
     const matchesUser = !resultFilterUser || r.userId === resultFilterUser;
     const matchesCategory = !resultFilterCategory || r.category === resultFilterCategory;
     return matchesUser && matchesCategory;
-  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }).sort((a, b) => {
+    const nameA = (users.find(u => u.id === a.userId)?.displayName || users.find(u => u.id === a.userId)?.email || '').toLowerCase();
+    const nameB = (users.find(u => u.id === b.userId)?.displayName || users.find(u => u.id === b.userId)?.email || '').toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
 
   if (!user || user.role !== 'admin') return null;
 
