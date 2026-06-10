@@ -51,6 +51,7 @@ interface AppState {
   feedbackMode: FeedbackMode;
   bookmarkedQuestions: number[];
   quizFinished: boolean;
+  resultSaved: boolean;
   setUser: (user: User | null) => void;
   setDarkMode: (dark: boolean) => void;
   setCurrentQuiz: (questions: Question[]) => void;
@@ -63,6 +64,7 @@ interface AppState {
   setFeedbackMode: (value: FeedbackMode) => void;
   toggleBookmark: (questionIndex: number) => void;
   finishQuiz: () => void;
+  setResultSaved: (saved: boolean) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -80,6 +82,7 @@ export const useStore = create<AppState>()(
       feedbackMode: 'after_each',
       bookmarkedQuestions: [],
       quizFinished: false,
+      resultSaved: false,
       setUser: (user) => set({ user }),
       setDarkMode: (darkMode) => set({ darkMode }),
       setCurrentQuiz: (currentQuiz) => set({ currentQuiz }),
@@ -96,9 +99,10 @@ export const useStore = create<AppState>()(
         }
         return { quizAnswers: [...state.quizAnswers, answer] };
       }),
-      startQuiz: () => set({ quizStartTime: Date.now(), currentQuestionIndex: 0, quizAnswers: [], quizFinished: false }),
-      resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, quizTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each', bookmarkedQuestions: [], quizFinished: false }),
+      startQuiz: () => set({ quizStartTime: Date.now(), currentQuestionIndex: 0, quizAnswers: [], quizFinished: false, resultSaved: false }),
+      resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, quizTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each', bookmarkedQuestions: [], quizFinished: false, resultSaved: false }),
       finishQuiz: () => set({ quizFinished: true }),
+      setResultSaved: (saved: boolean) => set({ resultSaved: saved }),
       setCurrentCategory: (id, name) => set({ currentCategoryId: id, currentCategoryName: name }),
       setFeedbackMode: (value) => set({ feedbackMode: value }),
       toggleBookmark: (questionIndex) => set((state) => {
@@ -124,6 +128,7 @@ export const useStore = create<AppState>()(
         feedbackMode: state.feedbackMode,
         bookmarkedQuestions: state.bookmarkedQuestions,
         quizFinished: state.quizFinished,
+        resultSaved: state.resultSaved,
       }),
     }
   )

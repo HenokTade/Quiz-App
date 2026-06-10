@@ -18,6 +18,7 @@ export default function Admin() {
   const [resultFilterUser, setResultFilterUser] = useState('');
   const [resultFilterCategory, setResultFilterCategory] = useState('');
   const [sortMode, setSortMode] = useState<'recent' | 'alpha'>('recent');
+  const [userSearch, setUserSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
   const navigate = useNavigate();
@@ -84,6 +85,12 @@ export default function Admin() {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 
+  const filteredUsers = users.filter(u => {
+    if (!userSearch) return true;
+    const term = userSearch.toLowerCase();
+    return (u.displayName?.toLowerCase().includes(term)) || u.email.toLowerCase().includes(term);
+  });
+
   if (!user || user.role !== 'admin') return null;
 
   const totalResults = allResults.length;
@@ -146,7 +153,35 @@ export default function Admin() {
               <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Manage Users ({totalUsers})</h2>
               <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{totalAdmins} admin{totalAdmins !== 1 ? 's' : ''}</p>
             </div>
-            {users.length === 0 ? (
+            <div className="mb-4 flex items-center gap-2">
+              <div className="relative flex-1 max-w-sm">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  onKeyDown={e => e.key === 'Escape' && setUserSearch('')}
+                  className={`w-full text-sm pl-10 pr-4 py-2.5 rounded-lg border transition-colors ${
+                    darkMode ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-400 focus:border-indigo-500' : 'bg-white text-gray-900 border-gray-300 placeholder-gray-400 focus:border-indigo-500'
+                  } outline-none focus:ring-2 focus:ring-indigo-500/30`}
+                />
+              </div>
+              <button
+                onClick={() => setUserSearch('')}
+                className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  userSearch
+                    ? 'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-400 dark:hover:bg-red-900/60'
+                    : darkMode ? 'bg-gray-700 text-gray-400 cursor-default' : 'bg-gray-100 text-gray-400 cursor-default'
+                }`}
+                disabled={!userSearch}
+              >
+                Clear
+              </button>
+            </div>
+            {filteredUsers.length === 0 ? (
               <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>No users registered yet.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -161,7 +196,7 @@ export default function Admin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map(u => (
+                    {filteredUsers.map(u => (
                       <tr key={u.id} className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
                         <td className={`py-3 px-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{u.displayName || '—'}</td>
                         <td className={`py-3 px-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{u.email}</td>

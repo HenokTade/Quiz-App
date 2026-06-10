@@ -5,12 +5,17 @@ import { db } from '../lib/firebase';
 import { useStore } from '../store/useStore';
 
 export default function Results() {
-  const { currentQuiz, quizAnswers, user, darkMode, resetQuiz, currentCategoryName, feedbackMode } = useStore();
+  const { currentQuiz, quizAnswers, user, darkMode, resetQuiz, currentCategoryName, feedbackMode, resultSaved, setResultSaved } = useStore();
   const [score, setScore] = useState(0);
   const navigate = useNavigate();
   const savedRef = useRef(false);
 
   useEffect(() => {
+    if (resultSaved) {
+      navigate('/home');
+      return;
+    }
+
     if (currentQuiz.length === 0) {
       navigate('/home');
       return;
@@ -54,6 +59,7 @@ export default function Results() {
               };
             })
           });
+          setResultSaved(true);
         } catch (error) {
           console.error("Error saving result:", error);
           savedRef.current = false;
@@ -64,6 +70,7 @@ export default function Results() {
   }, []);
 
   const handleRetake = () => {
+    setResultSaved(false);
     resetQuiz();
     navigate('/home');
   };
