@@ -184,7 +184,7 @@ export default function ResultDetail() {
                     ) : (
                       <>
                         <p className={answer.isCorrect ? 'text-green-400' : 'text-red-400'}>
-                          {answer.isCorrect ? '✓ Correct' : hasText ? `✗ Your answer: ${userLetter}. ${userAnswer}` : '✗ Incorrect'}
+                          {answer.isCorrect ? `✓ Correct ${correctLetter}. ${correctAnswer}` : hasText ? `✗ Your answer: ${userLetter}. ${userAnswer}` : '✗ Incorrect'}
                         </p>
                         {!answer.isCorrect && (
                           <p className="text-green-400 mt-1">
