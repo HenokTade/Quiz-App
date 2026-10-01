@@ -38,6 +38,7 @@ Build and improve a React/TypeScript quiz app with Firebase backend, Zustand sta
 - Real-time admin alerts: each violation written to new `violations` Firestore collection via `src/lib/reportViolation.ts`; Admin dashboard subscribes with `onSnapshot` and shows dismissible red anti-cheat banner (re-appears only for new violations)
 - Navbar during active quiz: logo click and logout now redirect to `/quiz-cooldown` (black blocked page) instead of escaping; QuizCooldown records a `navigation_attempt` violation on mount and keeps monitoring tab switches while shown
 - Added vitest + @testing-library/react test suite (`npm test`, 12 tests) covering blackout, alerts, debouncing, navigation blocking, and admin banner
+- Added 3-strike auto-submit: default strike limit 3 (`getStrikeLimit`/`getViolationMessage` in `src/lib/reportViolation.ts`); 2nd violation shows "Final warning … quiz will automatically close and be submitted", 3rd violation saves the pending answer, shows a 2.5s auto-submit countdown on the blackout screen, then finishes and navigates to `/results`; same flow on QuizCooldown blocked page; per-category `maxViolations` overrides the default 3
 
 ### In Progress
 - (none)
@@ -53,6 +54,8 @@ Build and improve a React/TypeScript quiz app with Firebase backend, Zustand sta
 - Fisher-Yates over sort(() => Math.random() - 0.5) for unbiased shuffle
 - Anti-cheat uses `visibilitychange` + `window.blur` + `pagehide` to catch tab switches, window focus loss, and app switching; `quizCompletedRef` prevents false triggers after quiz ends; violations stored in store + Firestore
 - `reportViolation()` in `src/lib/reportViolation.ts` is the single path for counting + reporting (Quiz uses `tab_switch`, QuizCooldown uses `navigation_attempt`)
+- Strike limit = category `maxViolations` if > 0, else default 3; auto-submit happens at the strike limit, final warning at limit − 1
+- QuizCooldown must NOT `navigate('/home')` when `submittingRef` is set — the `finishQuiz()` effect race otherwise redirects to `/home` instead of `/results`
 - Blackout overlay must stay always-mounted with `visibility` managed via ref (instant sync flip) — conditionally rendering it reintroduces the mobile app-switcher snapshot race
 
 ## Next Steps
@@ -74,7 +77,7 @@ Build and improve a React/TypeScript quiz app with Firebase backend, Zustand sta
 - `src/components/ErrorBoundary.tsx`: class component wrapping all routes
 - `src/lib/shuffle.ts`: Fisher-Yates shuffle utility
 - `src/lib/reportViolation.ts`: shared violation counter + Firestore reporter
-- `src/__tests__/antiCheat.test.tsx`: anti-cheat test suite (`npm test`)
+- `src/__tests__/antiCheat.test.tsx`: anti-cheat test suite (`npm test`, 15 tests)
 - `src/components/Skeleton.tsx`: skeleton loading components with dark mode support
 - `firestore.indexes.json`: composite indexes for results and questions queries
 - `firestore.rules`: security rules (results.update disabled)

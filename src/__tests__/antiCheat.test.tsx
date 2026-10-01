@@ -76,6 +76,7 @@ function renderQuiz() {
     <MemoryRouter initialEntries={['/quiz/cat1']}>
       <Routes>
         <Route path="/quiz/:categoryId" element={<Quiz />} />
+        <Route path="/results" element={<div>Results Page</div>} />
       </Routes>
     </MemoryRouter>
   );
@@ -227,8 +228,35 @@ describe('Quiz anti-cheat: mobile navigation bar / tab switch', () => {
 
     await waitFor(() => expect(useStore.getState().tabViolations).toBe(2));
     expect(mocks.addDoc).toHaveBeenCalledTimes(2);
-    await screen.findByText((content) => content.includes('Warning #2'));
+    await screen.findByText((content) => content.includes('Final warning'));
+    await screen.findByText((content) => content.includes('automatically close and be submitted'));
   });
+
+  it('warns on the 2nd attempt and auto-submits on the 3rd', async () => {
+    await renderQuizAndWait();
+
+    dispatchVisibility('hidden');
+    await screen.findByText('Tab Switch Detected');
+    fireEvent.click(screen.getByRole('button', { name: 'Return to Quiz' }));
+    await waitFor(() => expect(screen.queryByText('Tab Switch Detected')).toBeNull());
+
+    await new Promise((r) => setTimeout(r, 550));
+    dispatchVisibility('hidden');
+    await screen.findByText((content) => content.includes('Final warning'));
+    expect(screen.getByRole('button', { name: 'Return to Quiz' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Return to Quiz' }));
+    await waitFor(() => expect(screen.queryByText('Tab Switch Detected')).toBeNull());
+
+    await new Promise((r) => setTimeout(r, 550));
+    dispatchVisibility('hidden');
+    await screen.findByText((content) => content.includes('being automatically submitted'));
+    expect(screen.queryByRole('button', { name: 'Return to Quiz' })).toBeNull();
+    expect(screen.getByText(/Auto-submitting your quiz/)).toBeTruthy();
+
+    await screen.findByText('Results Page', {}, { timeout: 5000 });
+    expect(useStore.getState().quizFinished).toBe(true);
+    expect(useStore.getState().tabViolations).toBe(3);
+  }, 15000);
 });
 
 describe('Navigation bar clicks during a quiz', () => {
@@ -266,6 +294,39 @@ describe('Navigation bar clicks during a quiz', () => {
 
     await waitFor(() => expect(useStore.getState().tabViolations).toBe(2));
   });
+
+  it('shows the final warning after the 2nd violation on the blocked page', async () => {
+    useStore.setState({ quizStartTime: Date.now(), quizFinished: false, quizTime: 300, tabViolations: 1 });
+
+    render(
+      <MemoryRouter>
+        <QuizCooldown />
+      </MemoryRouter>
+    );
+
+    await screen.findByText(/Final warning: one more violation will automatically close and submit your quiz/);
+    expect(useStore.getState().tabViolations).toBe(2);
+  });
+
+  it('auto-submits from the blocked page on the 3rd violation', async () => {
+    useStore.setState({ quizStartTime: Date.now(), quizFinished: false, quizTime: 300, tabViolations: 2, quizViolationLimit: 0 });
+
+    render(
+      <MemoryRouter initialEntries={['/quiz-cooldown']}>
+        <Routes>
+          <Route path="/quiz-cooldown" element={<QuizCooldown />} />
+          <Route path="/results" element={<div>Results Page</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText(/Auto-submitting your quiz/);
+    expect(useStore.getState().tabViolations).toBe(3);
+    expect(screen.queryByRole('button', { name: 'Return to Quiz' })).toBeNull();
+
+    await screen.findByText('Results Page', {}, { timeout: 5000 });
+    expect(useStore.getState().quizFinished).toBe(true);
+  }, 15000);
 });
 
 describe('Admin real-time violation alerts', () => {

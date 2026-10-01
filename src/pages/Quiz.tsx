@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
 import { QuestionSkeleton, Skeleton } from '../components/Skeleton';
 import { shuffle } from '../lib/shuffle';
-import { reportViolation } from '../lib/reportViolation';
+import { reportViolation, getStrikeLimit, getViolationMessage } from '../lib/reportViolation';
 
 
 
@@ -30,9 +30,12 @@ export default function Quiz() {
   // ── Anti-cheat state ──────────────────────────────────────────────
   const [screenBlacked, setScreenBlacked] = useState(false);
   const [violationWarning, setViolationWarning] = useState('');
+  const [autoSubmitting, setAutoSubmitting] = useState(false);
   const blackoutRef = useRef<HTMLDivElement>(null);
   const violationWarningRef = useRef('');
   const pendingAlertRef = useRef(false);
+  const autoSubmittingRef = useRef(false);
+  const autoSubmitTimerRef = useRef<number | null>(null);
   // ─────────────────────────────────────────────────────────────────
 
   const {
@@ -48,6 +51,9 @@ export default function Quiz() {
 
   const quizAnswersRef = useRef(quizAnswers);
   quizAnswersRef.current = quizAnswers;
+
+  const selectedAnswerRef = useRef(selectedAnswer);
+  selectedAnswerRef.current = selectedAnswer;
 
   const questionsRef = useRef(questions);
   questionsRef.current = questions;
@@ -266,37 +272,53 @@ export default function Quiz() {
   // ANTI-CHEAT: Tab switch / window blur / page hide → blackout + alert
   // ═══════════════════════════════════════════════════════════════════
    const handleCheatEvent = useCallback(() => {
-     if (quizCompletedRef.current) return;
+     if (quizCompletedRef.current || autoSubmittingRef.current) return;
      if (Date.now() - lastViolationTimeRef.current < 500) return;
      lastViolationTimeRef.current = Date.now();
 
      const newCount = reportViolation('tab_switch');
-     const limit = quizViolationLimitRef.current;
+     const configuredLimit = quizViolationLimitRef.current;
+     const strikeLimit = getStrikeLimit(configuredLimit);
 
      // Flip the always-mounted overlay synchronously (before React
      // re-renders) so mobile app-switcher snapshots capture a black screen.
      if (blackoutRef.current) blackoutRef.current.style.visibility = 'visible';
 
-     let message: string;
-     if (limit > 0 && newCount >= limit) {
-       message = `🚫 You have exceeded the maximum allowed tab switches (${limit}). This incident has been recorded and will be reviewed by your instructor.`;
-     } else if (limit > 0) {
-       const remaining = limit - newCount;
-       message = `⚠️ Warning ${newCount}/${limit}: You left the quiz tab! Switching tabs is not allowed. ${remaining} warning${remaining !== 1 ? 's' : ''} remaining.`;
-     } else {
-       message = `⚠️ Warning #${newCount}: You left the quiz tab! Switching tabs is not allowed. This incident has been recorded.`;
-     }
-
+     const message = getViolationMessage(newCount, configuredLimit);
      violationWarningRef.current = message;
      setViolationWarning(message);
      setScreenBlacked(true);
+
+     if (newCount >= strikeLimit) {
+       autoSubmittingRef.current = true;
+       setAutoSubmitting(true);
+
+       const state = useStore.getState();
+       if (selectedAnswerRef.current !== null) {
+         state.updateQuizAnswer({
+           questionIndex: state.currentQuestionIndex,
+           selectedAnswer: selectedAnswerRef.current,
+         });
+       }
+
+       autoSubmitTimerRef.current = window.setTimeout(() => {
+         useStore.getState().finishQuiz();
+         navigate('/results');
+       }, 2500);
+     }
 
      if (document.visibilityState === 'visible') {
        window.alert(`Anti-Cheat Alert\n\n${message}`);
      } else {
        pendingAlertRef.current = true;
      }
-   }, []);
+   }, [navigate]);
+
+  useEffect(() => {
+    return () => {
+      if (autoSubmitTimerRef.current) clearTimeout(autoSubmitTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (loading || quizCompleted || questions.length === 0) return;
@@ -569,12 +591,19 @@ export default function Quiz() {
               Switching tabs, opening new windows, or navigating away during an exam is not permitted.
               All violations are recorded and visible to your instructor.
             </p>
-            <button
-              onClick={handleReturnToQuiz}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors text-lg"
-            >
-              Return to Quiz
-            </button>
+            {autoSubmitting ? (
+              <div className="py-3 rounded-xl border border-red-500/60 bg-red-900/40">
+                <p className="text-red-300 font-semibold animate-pulse">🚨 Auto-submitting your quiz…</p>
+                <p className="text-gray-400 text-xs mt-1">Your answers are being recorded.</p>
+              </div>
+            ) : (
+              <button
+                onClick={handleReturnToQuiz}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors text-lg"
+              >
+                Return to Quiz
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -1,23 +1,38 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { reportViolation } from '../lib/reportViolation';
+import { reportViolation, getStrikeLimit } from '../lib/reportViolation';
 
 export default function QuizCooldown() {
   const navigate = useNavigate();
-  const { quizFinished, quizStartTime, tabViolations } = useStore();
+  const { quizFinished, quizStartTime, tabViolations, quizViolationLimit } = useStore();
   const isQuizActive = !quizFinished && quizStartTime > 0;
   const recordedRef = useRef(false);
   const lastViolationTimeRef = useRef(0);
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const strikeLimit = getStrikeLimit(quizViolationLimit);
+
+  const maybeAutoSubmit = (count: number) => {
+    const limit = getStrikeLimit(useStore.getState().quizViolationLimit);
+    if (count >= limit && !submittingRef.current) {
+      submittingRef.current = true;
+      setSubmitting(true);
+      window.setTimeout(() => {
+        useStore.getState().finishQuiz();
+        navigate('/results');
+      }, 2500);
+    }
+  };
 
   useEffect(() => {
     if (!isQuizActive) {
-      navigate('/home');
+      if (!submittingRef.current) navigate('/home');
       return;
     }
     if (!recordedRef.current) {
       recordedRef.current = true;
-      reportViolation('navigation_attempt');
+      maybeAutoSubmit(reportViolation('navigation_attempt'));
     }
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -31,9 +46,10 @@ export default function QuizCooldown() {
     if (!isQuizActive) return;
 
     const record = () => {
+      if (submittingRef.current) return;
       if (Date.now() - lastViolationTimeRef.current < 500) return;
       lastViolationTimeRef.current = Date.now();
-      reportViolation('tab_switch');
+      maybeAutoSubmit(reportViolation('tab_switch'));
     };
 
     const onVisibilityChange = () => {
@@ -66,6 +82,11 @@ export default function QuizCooldown() {
             <p className="text-red-400 text-sm mb-2">
               ⛔ {tabViolations} violation{tabViolations !== 1 ? 's' : ''} recorded
             </p>
+            {tabViolations === strikeLimit - 1 && !submitting && (
+              <p className="text-amber-400 text-sm mb-2 font-semibold">
+                ⚠️ Final warning: one more violation will automatically close and submit your quiz.
+              </p>
+            )}
             <p className="text-gray-500 text-xs">
               All violations are tracked and visible to your instructor.
             </p>
@@ -76,14 +97,22 @@ export default function QuizCooldown() {
           <p className="text-gray-500 text-xs">
             Tab switches, external links, and navigation are monitored.
             Attempting to cheat will black out the screen and record a violation.
+            On the {strikeLimit}{strikeLimit === 1 ? 'st' : strikeLimit === 2 ? 'nd' : strikeLimit === 3 ? 'rd' : 'th'} violation your quiz is automatically submitted.
           </p>
         </div>
-        <button
-          onClick={() => navigate(-1)}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors text-lg"
-        >
-          Return to Quiz
-        </button>
+        {submitting ? (
+          <div className="bg-red-900/40 border border-red-500/60 rounded-xl p-4">
+            <p className="text-red-300 font-semibold animate-pulse">🚨 Auto-submitting your quiz…</p>
+            <p className="text-gray-400 text-xs mt-1">Your answers are being recorded.</p>
+          </div>
+        ) : (
+          <button
+            onClick={() => navigate(-1)}
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors text-lg"
+          >
+            Return to Quiz
+          </button>
+        )}
       </div>
     </div>
   );
