@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { useStore } from '../store/useStore';
 
 export default function Results() {
-  const { currentQuiz, quizAnswers, user, darkMode, resetQuiz, currentCategoryName, feedbackMode, resultSaved, setResultSaved } = useStore();
+  const { currentQuiz, quizAnswers, user, darkMode, resetQuiz, currentCategoryName, feedbackMode, resultSaved, setResultSaved, tabViolations } = useStore();
   const [score, setScore] = useState(0);
   const navigate = useNavigate();
   const savedRef = useRef(false);
@@ -43,6 +43,7 @@ export default function Results() {
             score: correct,
             totalQuestions: currentQuiz.length,
             date: new Date().toISOString(),
+            tabViolations: tabViolations,
             answers: currentQuiz.map((q, i) => {
               const a = quizAnswers.find(ans => ans.questionIndex === i);
               const answered = a !== undefined && a.selectedAnswer !== -1;

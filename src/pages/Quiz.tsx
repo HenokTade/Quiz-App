@@ -1,10 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useStore, Question } from '../store/useStore';
 import { QuestionSkeleton, Skeleton } from '../components/Skeleton';
 import { shuffle } from '../lib/shuffle';
+import { reportViolation } from '../lib/reportViolation';
 
 
 
@@ -25,7 +26,22 @@ export default function Quiz() {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [retryCount, setRetryCount] = useState(0);
-  const { darkMode, user, startQuiz, addQuizAnswer, updateQuizAnswer, currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory, setCurrentQuiz, feedbackMode, setFeedbackMode, quizAnswers, bookmarkedQuestions, toggleBookmark } = useStore();
+
+  // ── Anti-cheat state ──────────────────────────────────────────────
+  const [screenBlacked, setScreenBlacked] = useState(false);
+  const [violationWarning, setViolationWarning] = useState('');
+  const blackoutRef = useRef<HTMLDivElement>(null);
+  const violationWarningRef = useRef('');
+  const pendingAlertRef = useRef(false);
+  // ─────────────────────────────────────────────────────────────────
+
+  const {
+    darkMode, user, startQuiz, addQuizAnswer, updateQuizAnswer,
+    currentQuestionIndex, setCurrentQuestionIndex, setCurrentCategory,
+    setCurrentQuiz, feedbackMode, setFeedbackMode, quizAnswers,
+    bookmarkedQuestions, toggleBookmark,
+    tabViolations, quizViolationLimit, setViolationLimit,
+  } = useStore();
   const storeQuizStartTime = useStore((s) => s.quizStartTime);
   const storeQuizTime = useStore((s) => s.quizTime);
   const navigate = useNavigate();
@@ -36,6 +52,17 @@ export default function Quiz() {
   const questionsRef = useRef(questions);
   questionsRef.current = questions;
 
+  const quizViolationLimitRef = useRef(quizViolationLimit);
+  quizViolationLimitRef.current = quizViolationLimit;
+
+  const quizCompletedRef = useRef(quizCompleted);
+  quizCompletedRef.current = quizCompleted;
+
+  // Debounce guard: visibilitychange and window.blur fire almost simultaneously
+  // on a tab switch. Only the first event in a 500ms window should register.
+  const lastViolationTimeRef = useRef(0);
+
+  // ─── Data fetch ───────────────────────────────────────────────────
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -54,6 +81,10 @@ export default function Quiz() {
           return;
         }
 
+        // Set per-category violation limit (0 = warnings only, no auto-submit)
+        const maxViolations = catData.maxViolations ?? 0;
+        setViolationLimit(maxViolations);
+
         const state = useStore.getState();
 
         if (state.quizStartTime > 0 && !state.quizFinished && state.currentCategoryId === categoryId && state.currentQuiz.length > 0 && state.quizTime > 0) {
@@ -62,6 +93,7 @@ export default function Quiz() {
             setQuestions(state.currentQuiz);
             setInitialTime(state.quizTime);
             setTotalTimeLeft(state.quizTime - elapsed);
+            // Re-sync the store violation count on page refresh restore.
             setLoading(false);
             return;
           }
@@ -164,6 +196,7 @@ export default function Quiz() {
     fetchData();
   }, [categoryId, user, retryCount]);
 
+  // ─── Timer ────────────────────────────────────────────────────────
   useEffect(() => {
     if (showFeedback || quizCompleted || questions.length === 0 || storeQuizStartTime === 0) return;
     const timer = setInterval(() => {
@@ -179,6 +212,7 @@ export default function Quiz() {
     return () => clearInterval(timer);
   }, [showFeedback, quizCompleted, questions.length, storeQuizStartTime, initialTime, addQuizAnswer, navigate]);
 
+  // ─── Timer notices ────────────────────────────────────────────────
   useEffect(() => {
     if (totalTimeLeft <= 0 || initialTime <= 0) return;
     const half = Math.round(initialTime * 0.5);
@@ -204,12 +238,14 @@ export default function Quiz() {
     }
   }, [totalTimeLeft]);
 
+  // ─── Sync selected answer when question changes ───────────────────
   useEffect(() => {
     const prev = quizAnswers.find(a => a.questionIndex === currentQuestionIndex);
     setSelectedAnswer(prev !== undefined ? prev.selectedAnswer : null);
     setShowFeedback(false);
   }, [currentQuestionIndex, quizAnswers]);
 
+  // ─── Prevent accidental page leave ───────────────────────────────
   useEffect(() => {
     if (quizCompleted) return;
     const handler = (e: BeforeUnloadEvent) => {
@@ -226,6 +262,139 @@ export default function Quiz() {
     return () => window.removeEventListener('popstate', handler);
   }, [quizCompleted]);
 
+  // ═══════════════════════════════════════════════════════════════════
+  // ANTI-CHEAT: Tab switch / window blur / page hide → blackout + alert
+  // ═══════════════════════════════════════════════════════════════════
+   const handleCheatEvent = useCallback(() => {
+     if (quizCompletedRef.current) return;
+     if (Date.now() - lastViolationTimeRef.current < 500) return;
+     lastViolationTimeRef.current = Date.now();
+
+     const newCount = reportViolation('tab_switch');
+     const limit = quizViolationLimitRef.current;
+
+     // Flip the always-mounted overlay synchronously (before React
+     // re-renders) so mobile app-switcher snapshots capture a black screen.
+     if (blackoutRef.current) blackoutRef.current.style.visibility = 'visible';
+
+     let message: string;
+     if (limit > 0 && newCount >= limit) {
+       message = `🚫 You have exceeded the maximum allowed tab switches (${limit}). This incident has been recorded and will be reviewed by your instructor.`;
+     } else if (limit > 0) {
+       const remaining = limit - newCount;
+       message = `⚠️ Warning ${newCount}/${limit}: You left the quiz tab! Switching tabs is not allowed. ${remaining} warning${remaining !== 1 ? 's' : ''} remaining.`;
+     } else {
+       message = `⚠️ Warning #${newCount}: You left the quiz tab! Switching tabs is not allowed. This incident has been recorded.`;
+     }
+
+     violationWarningRef.current = message;
+     setViolationWarning(message);
+     setScreenBlacked(true);
+
+     if (document.visibilityState === 'visible') {
+       window.alert(`Anti-Cheat Alert\n\n${message}`);
+     } else {
+       pendingAlertRef.current = true;
+     }
+   }, []);
+
+  useEffect(() => {
+    if (loading || quizCompleted || questions.length === 0) return;
+
+     const onVisibilityChange = () => {
+       if (document.visibilityState === 'hidden') {
+         handleCheatEvent();
+       } else if (pendingAlertRef.current) {
+         pendingAlertRef.current = false;
+         window.alert(`Anti-Cheat Alert\n\n${violationWarningRef.current}`);
+       }
+     };
+
+     const onBlur = () => {
+       // Only count blur if visibilitychange didn't already fire
+       if (document.visibilityState !== 'hidden') {
+         handleCheatEvent();
+       }
+     };
+
+     const onPageHide = () => {
+       handleCheatEvent();
+     };
+
+     document.addEventListener('visibilitychange', onVisibilityChange);
+     window.addEventListener('blur', onBlur);
+     window.addEventListener('pagehide', onPageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('pagehide', onPageHide);
+    };
+  }, [loading, quizCompleted, questions.length, handleCheatEvent]);
+
+  // Keep the overlay's inline visibility in sync with React state
+  // (the cheat handler flips it manually for instant blackouts).
+  useEffect(() => {
+    if (blackoutRef.current) {
+      blackoutRef.current.style.visibility = screenBlacked ? 'visible' : 'hidden';
+    }
+  }, [screenBlacked]);
+
+  // ─── Disable right-click on the page during quiz ─────────────────
+  useEffect(() => {
+    if (loading || quizCompleted || questions.length === 0) return;
+
+    const onContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener('contextmenu', onContextMenu);
+    return () => document.removeEventListener('contextmenu', onContextMenu);
+  }, [loading, quizCompleted, questions.length]);
+
+  // ─── Block copy/paste/select-all keyboard shortcuts ───────────────
+  useEffect(() => {
+    if (loading || quizCompleted || questions.length === 0) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const blockedKeys = ['c', 'a', 'u', 's', 'p', 'f']; // copy, select-all, view-source, save, print, find
+      if ((e.ctrlKey || e.metaKey) && blockedKeys.includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
+      // F12 DevTools
+      if (e.key === 'F12') {
+        e.preventDefault();
+      }
+      // PrintScreen
+      if (e.key === 'PrintScreen') {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [loading, quizCompleted, questions.length]);
+
+  // ─── Disable text selection via CSS injection ─────────────────────
+  useEffect(() => {
+    if (loading || quizCompleted || questions.length === 0) return;
+    const style = document.createElement('style');
+    style.id = 'quiz-no-select';
+    style.textContent = `
+      .quiz-content * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        user-select: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      const el = document.getElementById('quiz-no-select');
+      if (el) el.remove();
+    };
+  }, [loading, quizCompleted, questions.length]);
+
+  // ─── Answer helpers ───────────────────────────────────────────────
   const saveCurrentAnswer = () => {
     const answer = selectedAnswer !== null ? selectedAnswer : -1;
     updateQuizAnswer({ questionIndex: currentQuestionIndex, selectedAnswer: answer });
@@ -298,6 +467,15 @@ export default function Quiz() {
     setShowLeaveConfirm(false);
   };
 
+  // Dismiss blackout when student returns to the tab
+  const handleReturnToQuiz = () => {
+    pendingAlertRef.current = false;
+    violationWarningRef.current = '';
+    setScreenBlacked(false);
+    setViolationWarning('');
+  };
+
+  // ─── Loading / blocked / error states ────────────────────────────
   if (loading) {
     return (
       <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -360,7 +538,48 @@ export default function Quiz() {
   const isCorrect = selectedAnswer === correctAnswerIndex;
 
   return (
-    <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'} quiz-content`}>
+
+      {/* ═══════════ ANTI-CHEAT BLACKOUT OVERLAY ═══════════ */}
+      <div
+        ref={blackoutRef}
+        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
+        style={{ background: '#000000', visibility: 'hidden' }}
+        aria-hidden={!screenBlacked}
+      >
+        {screenBlacked && (
+          <div className="max-w-md w-full mx-4 text-center px-6">
+            {/* Animated warning icon */}
+            <div className="text-7xl mb-6 animate-pulse">🚫</div>
+            <h2 className="text-2xl font-bold text-white mb-4">Tab Switch Detected</h2>
+            <p className="text-gray-300 mb-3 leading-relaxed">{violationWarning}</p>
+            {tabViolations > 0 && (
+              <div className="flex items-center justify-center gap-2 mb-6">
+                {Array.from({ length: Math.max(quizViolationLimit || tabViolations, tabViolations) }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-3 h-3 rounded-full transition-colors ${
+                      i < tabViolations ? 'bg-red-500' : 'bg-gray-600'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-gray-500 mb-8">
+              Switching tabs, opening new windows, or navigating away during an exam is not permitted.
+              All violations are recorded and visible to your instructor.
+            </p>
+            <button
+              onClick={handleReturnToQuiz}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors text-lg"
+            >
+              Return to Quiz
+            </button>
+          </div>
+        )}
+      </div>
+      {/* ════════════════════════════════════════════════════ */}
+
       <div className="max-w-2xl mx-auto px-4">
         <div className="mb-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -376,12 +595,23 @@ export default function Quiz() {
               Question {currentQuestionIndex + 1} of {questions.length}
             </span>
           </div>
-          <div className={`px-4 py-2 rounded-lg font-bold transition-all ${
-            criticalTimer ? 'bg-red-500 animate-pulse scale-110'
-            : totalTimeLeft <= Math.round(initialTime * 0.25) ? 'bg-yellow-500'
-            : 'bg-indigo-600'
-          } text-white`}>
-            ⏱️ {Math.floor(totalTimeLeft / 60)}:{(totalTimeLeft % 60).toString().padStart(2, '0')}
+          <div className="flex items-center gap-2">
+            {/* Violation indicator badge */}
+            {tabViolations > 0 && (
+              <div
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/20 border border-red-500/40"
+                title={`${tabViolations} tab switch violation${tabViolations !== 1 ? 's' : ''} recorded`}
+              >
+                <span className="text-red-400 text-xs font-semibold">🚫 {tabViolations}</span>
+              </div>
+            )}
+            <div className={`px-4 py-2 rounded-lg font-bold transition-all ${
+              criticalTimer ? 'bg-red-500 animate-pulse scale-110'
+              : totalTimeLeft <= Math.round(initialTime * 0.25) ? 'bg-yellow-500'
+              : 'bg-indigo-600'
+            } text-white`}>
+              ⏱️ {Math.floor(totalTimeLeft / 60)}:{(totalTimeLeft % 60).toString().padStart(2, '0')}
+            </div>
           </div>
         </div>
 

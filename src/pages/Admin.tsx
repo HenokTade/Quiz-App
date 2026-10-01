@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useStore } from '../store/useStore';
 import { useNavigate } from 'react-router-dom';
@@ -7,13 +7,21 @@ import { useNavigate } from 'react-router-dom';
 interface UserDoc { id: string; email: string; displayName?: string; role: 'student' | 'admin'; createdAt?: string }
 
 interface QuizResultDoc {
-  id: string; userId: string; category: string; score: number; totalQuestions: number; date: string
+  id: string; userId: string; category: string; score: number; totalQuestions: number; date: string;
+  tabViolations?: number;
+}
+
+interface ViolationDoc {
+  id: string; userId: string; userName: string; userEmail?: string;
+  categoryId?: string; categoryName?: string; type?: string; violationCount?: number; createdAt: number;
 }
 
 export default function Admin() {
   const { user, darkMode } = useStore();
   const [users, setUsers] = useState<UserDoc[]>([]);
   const [allResults, setAllResults] = useState<QuizResultDoc[]>([]);
+  const [violations, setViolations] = useState<ViolationDoc[]>([]);
+  const [dismissedViolationCount, setDismissedViolationCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'results'>('stats');
   const [resultFilterUser, setResultFilterUser] = useState('');
   const [resultFilterCategory, setResultFilterCategory] = useState('');
@@ -44,6 +52,22 @@ export default function Admin() {
       } finally { setLoading(false); }
     };
     load();
+  }, [user]);
+
+  // Real-time anti-cheat alerts: fires as soon as a student switches tabs/screens
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    const violationsQuery = query(
+      collection(db, 'violations'),
+      orderBy('createdAt', 'desc'),
+      limit(30)
+    );
+    const unsubscribe = onSnapshot(violationsQuery, (snapshot) => {
+      setViolations(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as ViolationDoc[]);
+    }, (err) => {
+      console.error('Violation listener error:', err);
+    });
+    return () => unsubscribe();
   }, [user]);
 
   const handleRoleChange = async (uid: string, newRole: 'student' | 'admin') => {
@@ -96,6 +120,7 @@ export default function Admin() {
   const totalResults = allResults.length;
   const totalUsers = users.length;
   const totalAdmins = users.filter(u => u.role === 'admin').length;
+  const newViolationCount = violations.length - dismissedViolationCount;
 
   const navBtn = (tab: typeof activeTab, label: string) => (
     <button onClick={() => setActiveTab(tab)}
@@ -121,6 +146,39 @@ export default function Admin() {
         {fetchError && (
           <div className="mb-6 p-4 bg-red-100 dark:bg-red-900/40 border border-red-300 dark:border-red-700/50 text-red-700 dark:text-red-400 rounded-xl">
             Failed to load data: {fetchError}
+          </div>
+        )}
+
+        {newViolationCount > 0 && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border-2 border-red-400 rounded-xl shadow-lg">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl animate-pulse">🚨</span>
+                <div>
+                  <p className="font-bold text-red-700 dark:text-red-400">
+                    Anti-Cheat Alert — {newViolationCount} new tab switch violation{newViolationCount !== 1 ? 's' : ''} recorded
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {violations.slice(0, Math.min(newViolationCount, 5)).map(v => (
+                      <li key={v.id} className="text-sm text-red-600 dark:text-red-300">
+                        <span className="font-semibold">{v.userName}</span>
+                        {v.type === 'navigation_attempt'
+                          ? ' tried to leave the active quiz'
+                          : ' switched tabs/screens during the quiz'}
+                        {v.categoryName && v.categoryName !== 'Unknown' && <> — <span className="font-medium">{v.categoryName}</span></>}
+                        <span className="text-red-400 dark:text-red-500 text-xs"> ({new Date(v.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, #{v.violationCount ?? 1})</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <button
+                onClick={() => setDismissedViolationCount(violations.length)}
+                className="text-red-400 hover:text-red-600 text-sm font-medium shrink-0"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         )}
 
@@ -269,6 +327,7 @@ export default function Admin() {
                       <th className="text-left py-3 px-2 font-medium">Category</th>
                       <th className="text-left py-3 px-2 font-medium">Score</th>
                       <th className="text-left py-3 px-2 font-medium">Date</th>
+                      <th className="text-center py-3 px-2 font-medium">Violations</th>
                       <th className="text-right py-3 px-2 font-medium">Action</th>
                     </tr>
                   </thead>
@@ -290,6 +349,18 @@ export default function Admin() {
                           </td>
                           <td className={`py-3 px-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             {new Date(r.date).toLocaleDateString()} {new Date(r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td className="py-3 px-2 text-center">
+                            {r.tabViolations && r.tabViolations > 0 ? (
+                              <span
+                                title={`${r.tabViolations} tab switch violation${r.tabViolations !== 1 ? 's' : ''} recorded`}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-semibold"
+                              >
+                                🚫 {r.tabViolations}
+                              </span>
+                            ) : (
+                              <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>—</span>
+                            )}
                           </td>
                           <td className="py-3 px-2 text-right">
                             <div className="flex items-center justify-end gap-2">

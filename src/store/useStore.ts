@@ -52,6 +52,10 @@ interface AppState {
   bookmarkedQuestions: number[];
   quizFinished: boolean;
   resultSaved: boolean;
+  /** Number of times the student has switched away from the quiz tab */
+  tabViolations: number;
+  /** Max violations allowed before warnings lock. 0 = unlimited. Set per category. */
+  quizViolationLimit: number;
   setUser: (user: User | null) => void;
   setDarkMode: (dark: boolean) => void;
   setCurrentQuiz: (questions: Question[]) => void;
@@ -65,6 +69,8 @@ interface AppState {
   toggleBookmark: (questionIndex: number) => void;
   finishQuiz: () => void;
   setResultSaved: (saved: boolean) => void;
+  incrementTabViolation: () => void;
+  setViolationLimit: (limit: number) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -83,6 +89,8 @@ export const useStore = create<AppState>()(
       bookmarkedQuestions: [],
       quizFinished: false,
       resultSaved: false,
+      tabViolations: 0,
+      quizViolationLimit: 0,
       setUser: (user) => set({ user }),
       setDarkMode: (darkMode) => set({ darkMode }),
       setCurrentQuiz: (currentQuiz) => set({ currentQuiz }),
@@ -99,8 +107,8 @@ export const useStore = create<AppState>()(
         }
         return { quizAnswers: [...state.quizAnswers, answer] };
       }),
-      startQuiz: () => set({ quizStartTime: Date.now(), currentQuestionIndex: 0, quizAnswers: [], quizFinished: false, resultSaved: false }),
-      resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, quizTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each', bookmarkedQuestions: [], quizFinished: false, resultSaved: false }),
+      startQuiz: () => set({ quizStartTime: Date.now(), currentQuestionIndex: 0, quizAnswers: [], quizFinished: false, resultSaved: false, tabViolations: 0, quizViolationLimit: 0 }),
+      resetQuiz: () => set({ currentQuiz: [], currentQuestionIndex: 0, quizAnswers: [], quizStartTime: 0, quizTime: 0, currentCategoryId: '', currentCategoryName: '', feedbackMode: 'after_each', bookmarkedQuestions: [], quizFinished: false, resultSaved: false, tabViolations: 0, quizViolationLimit: 0 }),
       finishQuiz: () => set({ quizFinished: true }),
       setResultSaved: (saved: boolean) => set({ resultSaved: saved }),
       setCurrentCategory: (id, name) => set({ currentCategoryId: id, currentCategoryName: name }),
@@ -113,6 +121,8 @@ export const useStore = create<AppState>()(
             : [...state.bookmarkedQuestions, questionIndex]
         };
       }),
+      incrementTabViolation: () => set((state) => ({ tabViolations: state.tabViolations + 1 })),
+      setViolationLimit: (limit: number) => set({ quizViolationLimit: limit }),
     }),
     {
       name: 'quiz-app-store',
@@ -129,6 +139,8 @@ export const useStore = create<AppState>()(
         bookmarkedQuestions: state.bookmarkedQuestions,
         quizFinished: state.quizFinished,
         resultSaved: state.resultSaved,
+        tabViolations: state.tabViolations,
+        quizViolationLimit: state.quizViolationLimit,
       }),
     }
   )

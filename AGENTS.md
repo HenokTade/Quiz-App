@@ -32,6 +32,12 @@ Build and improve a React/TypeScript quiz app with Firebase backend, Zustand sta
 - Renamed "Skip" button to "Next" in Quiz.tsx (it saves the answer, doesn't skip)
 - Fixed: when shuffle is off, choices within each question are no longer shuffled
 - Added bookmark feature: students can bookmark questions during quiz (star icon toggles bookmark), bookmarked questions show amber color in navigation grid
+- Added anti-cheat system: screen goes black (fullscreen overlay) when student switches tabs or blurs window, with violation strike counter; violations persisted in store and saved to Firestore result; admin results table shows violation count badge; right-click disabled, Ctrl+C/A/U/S/P/F12 blocked; text selection CSS-disabled during quiz; per-category `maxViolations` field in Firestore controls warning limit (0 = unlimited warnings)
+- Hardened anti-cheat for mobile: blackout overlay is always-mounted solid `#000` and flipped synchronously via ref (so app-switcher snapshots capture a black screen), added `pagehide` listener alongside `visibilitychange`/`blur` (500ms debounce)
+- Native `window.alert()` fires for the student on tab/screen switch (immediately if tab visible, on return if hidden); overlay warning remains until "Return to Quiz"
+- Real-time admin alerts: each violation written to new `violations` Firestore collection via `src/lib/reportViolation.ts`; Admin dashboard subscribes with `onSnapshot` and shows dismissible red anti-cheat banner (re-appears only for new violations)
+- Navbar during active quiz: logo click and logout now redirect to `/quiz-cooldown` (black blocked page) instead of escaping; QuizCooldown records a `navigation_attempt` violation on mount and keeps monitoring tab switches while shown
+- Added vitest + @testing-library/react test suite (`npm test`, 12 tests) covering blackout, alerts, debouncing, navigation blocking, and admin banner
 
 ### In Progress
 - (none)
@@ -45,15 +51,19 @@ Build and improve a React/TypeScript quiz app with Firebase backend, Zustand sta
 - Result documents embed full per-answer question data so detail page doesn't rely on Firestore query order
 - Lock check always fetches category doc from Firestore first before any restore — persist can't bypass lock
 - Fisher-Yates over sort(() => Math.random() - 0.5) for unbiased shuffle
+- Anti-cheat uses `visibilitychange` + `window.blur` + `pagehide` to catch tab switches, window focus loss, and app switching; `quizCompletedRef` prevents false triggers after quiz ends; violations stored in store + Firestore
+- `reportViolation()` in `src/lib/reportViolation.ts` is the single path for counting + reporting (Quiz uses `tab_switch`, QuizCooldown uses `navigation_attempt`)
+- Blackout overlay must stay always-mounted with `visibility` managed via ref (instant sync flip) — conditionally rendering it reintroduces the mobile app-switcher snapshot race
 
 ## Next Steps
-- (awaiting user direction)
+- Deploy updated Firestore rules (new `violations` collection): `firebase deploy --only firestore:rules`
 
 ## Critical Context
 - Firebase composite indexes are required for results queries on userId+categoryId and userId+date — firestore.indexes.json is created but must be deployed via `firebase deploy --only firestore:indexes`
 - The persist middleware uses localStorage key `quiz-app-store`; clearing localStorage or changing the store shape could cause hydration issues
 - Old results (stored before the selectedText/correctText fix) fall back to safe display without showing wrong answer text
 - Timer on page refresh correctly resumes because quizStartTime (epoch ms) is persisted and compared against Date.now()
+- Anti-cheat: `tabViolations` and `quizViolationLimit` are persisted in localStorage. To configure max violations per category, set `maxViolations` field (integer) on the Firestore category document (0 or missing = unlimited warnings, no auto-submit)
 
 ## Relevant Files
 - `src/pages/Quiz.tsx`: main quiz page — timer, navigation, submit/leave confirmation, lock check
@@ -63,6 +73,8 @@ Build and improve a React/TypeScript quiz app with Firebase backend, Zustand sta
 - `src/pages/Login.tsx`: login with forgot password modal
 - `src/components/ErrorBoundary.tsx`: class component wrapping all routes
 - `src/lib/shuffle.ts`: Fisher-Yates shuffle utility
+- `src/lib/reportViolation.ts`: shared violation counter + Firestore reporter
+- `src/__tests__/antiCheat.test.tsx`: anti-cheat test suite (`npm test`)
 - `src/components/Skeleton.tsx`: skeleton loading components with dark mode support
 - `firestore.indexes.json`: composite indexes for results and questions queries
 - `firestore.rules`: security rules (results.update disabled)
