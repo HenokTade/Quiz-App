@@ -48,6 +48,7 @@ export default function Quiz() {
   const storeQuizStartTime = useStore((s) => s.quizStartTime);
   const storeQuizTime = useStore((s) => s.quizTime);
   const navigate = useNavigate();
+  const isAdmin = user?.role === 'admin';
 
   const quizAnswersRef = useRef(quizAnswers);
   quizAnswersRef.current = quizAnswers;
@@ -272,6 +273,7 @@ export default function Quiz() {
   // ANTI-CHEAT: Tab switch / window blur / page hide → blackout + alert
   // ═══════════════════════════════════════════════════════════════════
    const handleCheatEvent = useCallback(() => {
+     if (useStore.getState().user?.role === 'admin') return;
      if (quizCompletedRef.current || autoSubmittingRef.current) return;
      if (Date.now() - lastViolationTimeRef.current < 500) return;
      lastViolationTimeRef.current = Date.now();
@@ -321,7 +323,7 @@ export default function Quiz() {
   }, []);
 
   useEffect(() => {
-    if (loading || quizCompleted || questions.length === 0) return;
+    if (loading || quizCompleted || questions.length === 0 || isAdmin) return;
 
      const onVisibilityChange = () => {
        if (document.visibilityState === 'hidden') {
@@ -352,7 +354,7 @@ export default function Quiz() {
       window.removeEventListener('blur', onBlur);
       window.removeEventListener('pagehide', onPageHide);
     };
-  }, [loading, quizCompleted, questions.length, handleCheatEvent]);
+    }, [loading, quizCompleted, questions.length, handleCheatEvent, isAdmin]);
 
   // Keep the overlay's inline visibility in sync with React state
   // (the cheat handler flips it manually for instant blackouts).
@@ -364,7 +366,7 @@ export default function Quiz() {
 
   // ─── Disable right-click on the page during quiz ─────────────────
   useEffect(() => {
-    if (loading || quizCompleted || questions.length === 0) return;
+    if (loading || quizCompleted || questions.length === 0 || isAdmin) return;
 
     const onContextMenu = (e: MouseEvent) => {
       e.preventDefault();
@@ -372,11 +374,11 @@ export default function Quiz() {
 
     document.addEventListener('contextmenu', onContextMenu);
     return () => document.removeEventListener('contextmenu', onContextMenu);
-  }, [loading, quizCompleted, questions.length]);
+  }, [loading, quizCompleted, questions.length, isAdmin]);
 
   // ─── Block copy/paste/select-all keyboard shortcuts ───────────────
   useEffect(() => {
-    if (loading || quizCompleted || questions.length === 0) return;
+    if (loading || quizCompleted || questions.length === 0 || isAdmin) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
       const blockedKeys = ['c', 'a', 'u', 's', 'p', 'f']; // copy, select-all, view-source, save, print, find
@@ -395,11 +397,11 @@ export default function Quiz() {
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [loading, quizCompleted, questions.length]);
+  }, [loading, quizCompleted, questions.length, isAdmin]);
 
   // ─── Disable text selection via CSS injection ─────────────────────
   useEffect(() => {
-    if (loading || quizCompleted || questions.length === 0) return;
+    if (loading || quizCompleted || questions.length === 0 || isAdmin) return;
     const style = document.createElement('style');
     style.id = 'quiz-no-select';
     style.textContent = `
@@ -414,7 +416,7 @@ export default function Quiz() {
       const el = document.getElementById('quiz-no-select');
       if (el) el.remove();
     };
-  }, [loading, quizCompleted, questions.length]);
+  }, [loading, quizCompleted, questions.length, isAdmin]);
 
   // ─── Answer helpers ───────────────────────────────────────────────
   const saveCurrentAnswer = () => {

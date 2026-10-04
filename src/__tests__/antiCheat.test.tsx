@@ -329,6 +329,74 @@ describe('Navigation bar clicks during a quiz', () => {
   }, 15000);
 });
 
+describe('Admin bypasses anti-cheat', () => {
+  const adminUser = { uid: 'admin1', email: 'admin@test.com', role: 'admin' as const, displayName: 'Admin' };
+
+  it('does not blackout or record a violation when an admin switches tabs', async () => {
+    useStore.setState({ user: adminUser });
+    await renderQuizAndWait();
+
+    dispatchVisibility('hidden');
+    await new Promise((r) => setTimeout(r, 100));
+
+    expect(useStore.getState().tabViolations).toBe(0);
+    expect(mocks.addDoc).not.toHaveBeenCalled();
+    expect(screen.queryByText('Tab Switch Detected')).toBeNull();
+    expect(screen.getByText(/Question 1 of 1/)).toBeTruthy();
+  });
+
+  it('does not record a violation when an admin loses window focus', async () => {
+    useStore.setState({ user: adminUser });
+    await renderQuizAndWait();
+
+    act(() => {
+      window.dispatchEvent(new Event('blur'));
+    });
+    await new Promise((r) => setTimeout(r, 100));
+
+    expect(useStore.getState().tabViolations).toBe(0);
+    expect(mocks.addDoc).not.toHaveBeenCalled();
+    expect(screen.queryByText('Tab Switch Detected')).toBeNull();
+  });
+
+  it('does not record a navigation violation for an admin on the blocked page', async () => {
+    useStore.setState({
+      user: adminUser,
+      quizStartTime: Date.now(),
+      quizFinished: false,
+      quizTime: 300,
+      tabViolations: 0,
+    });
+
+    render(
+      <MemoryRouter>
+        <QuizCooldown />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Navigation Blocked');
+    await new Promise((r) => setTimeout(r, 100));
+
+    expect(useStore.getState().tabViolations).toBe(0);
+    expect(mocks.addDoc).not.toHaveBeenCalled();
+  });
+
+  it('keeps right-click, shortcuts, and text selection enabled for an admin', async () => {
+    useStore.setState({ user: adminUser });
+    await renderQuizAndWait();
+
+    const ctx = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const prevented = !document.dispatchEvent(ctx);
+    expect(prevented).toBe(false);
+
+    const ctrlS = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true });
+    const sPrevented = !document.dispatchEvent(ctrlS);
+    expect(sPrevented).toBe(false);
+
+    expect(document.getElementById('quiz-no-select')).toBeNull();
+  });
+});
+
 describe('Admin real-time violation alerts', () => {
   function fakeSnapshot(docs: { id: string; data: Record<string, unknown> }[]) {
     return { docs: docs.map((d) => ({ id: d.id, data: () => d.data })) };

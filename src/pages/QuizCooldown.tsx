@@ -5,8 +5,9 @@ import { reportViolation, getStrikeLimit } from '../lib/reportViolation';
 
 export default function QuizCooldown() {
   const navigate = useNavigate();
-  const { quizFinished, quizStartTime, tabViolations, quizViolationLimit } = useStore();
+  const { quizFinished, quizStartTime, tabViolations, quizViolationLimit, user } = useStore();
   const isQuizActive = !quizFinished && quizStartTime > 0;
+  const isAdmin = user?.role === 'admin';
   const recordedRef = useRef(false);
   const lastViolationTimeRef = useRef(0);
   const submittingRef = useRef(false);
@@ -30,6 +31,8 @@ export default function QuizCooldown() {
       if (!submittingRef.current) navigate('/home');
       return;
     }
+    // Anti-cheat doesn't apply to admins — never record a violation for them.
+    if (isAdmin) return;
     if (!recordedRef.current) {
       recordedRef.current = true;
       maybeAutoSubmit(reportViolation('navigation_attempt'));
@@ -39,11 +42,11 @@ export default function QuizCooldown() {
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [isQuizActive, navigate]);
+  }, [isQuizActive, navigate, isAdmin]);
 
   // Keep monitoring tab switches even on the blocked page
   useEffect(() => {
-    if (!isQuizActive) return;
+    if (!isQuizActive || isAdmin) return;
 
     const record = () => {
       if (submittingRef.current) return;
@@ -65,7 +68,7 @@ export default function QuizCooldown() {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('blur', onBlur);
     };
-  }, [isQuizActive]);
+  }, [isQuizActive, isAdmin]);
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center">

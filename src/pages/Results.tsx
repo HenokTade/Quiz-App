@@ -85,7 +85,7 @@ export default function Results() {
           <h1 className={`text-3xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Quiz Complete!
           </h1>
-          
+
           {feedbackMode !== 'none' && (
             <>
               <div className="text-6xl font-bold mb-4">

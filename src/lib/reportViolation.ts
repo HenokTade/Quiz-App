@@ -31,6 +31,12 @@ export function getViolationMessage(newCount: number, configuredLimit: number): 
 
 export function reportViolation(type: ViolationType): number {
   const state = useStore.getState();
+
+  // Anti-cheat does not apply to admins — never count or report their violations.
+  if (state.user?.role === 'admin') {
+    return state.tabViolations;
+  }
+
   const newCount = state.tabViolations + 1;
   state.incrementTabViolation();
 

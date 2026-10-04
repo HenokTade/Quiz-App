@@ -37,8 +37,10 @@ Build and improve a React/TypeScript quiz app with Firebase backend, Zustand sta
 - Native `window.alert()` fires for the student on tab/screen switch (immediately if tab visible, on return if hidden); overlay warning remains until "Return to Quiz"
 - Real-time admin alerts: each violation written to new `violations` Firestore collection via `src/lib/reportViolation.ts`; Admin dashboard subscribes with `onSnapshot` and shows dismissible red anti-cheat banner (re-appears only for new violations)
 - Navbar during active quiz: logo click and logout now redirect to `/quiz-cooldown` (black blocked page) instead of escaping; QuizCooldown records a `navigation_attempt` violation on mount and keeps monitoring tab switches while shown
-- Added vitest + @testing-library/react test suite (`npm test`, 12 tests) covering blackout, alerts, debouncing, navigation blocking, and admin banner
+- Added vitest + @testing-library/react test suite (`npm test`, 19 tests) covering blackout, alerts, debouncing, navigation blocking, admin banner, and admin anti-cheat bypass
 - Added 3-strike auto-submit: default strike limit 3 (`getStrikeLimit`/`getViolationMessage` in `src/lib/reportViolation.ts`); 2nd violation shows "Final warning … quiz will automatically close and be submitted", 3rd violation saves the pending answer, shows a 2.5s auto-submit countdown on the blackout screen, then finishes and navigates to `/results`; same flow on QuizCooldown blocked page; per-category `maxViolations` overrides the default 3
+- Admin exempt from anti-cheat: `reportViolation()` returns early for `role === 'admin'` (no count, no Firestore write); Quiz.tsx skips tab-switch listeners, blackout, right-click/keyboard/text-selection blocks for admin; QuizCooldown skips violation recording/monitoring; Navbar nav-blocking (`isQuizActive`) excludes admin
+- Admin exempt from retake restrictions: Quiz.tsx already bypassed admin (kept); Home.tsx no longer computes `takenOnce`/`cooldownEnd` for admin (cards always clickable, no "Taken"/cooldown badges), lock badge hidden for admin
 
 ### In Progress
 - (none)
@@ -77,7 +79,7 @@ Build and improve a React/TypeScript quiz app with Firebase backend, Zustand sta
 - `src/components/ErrorBoundary.tsx`: class component wrapping all routes
 - `src/lib/shuffle.ts`: Fisher-Yates shuffle utility
 - `src/lib/reportViolation.ts`: shared violation counter + Firestore reporter
-- `src/__tests__/antiCheat.test.tsx`: anti-cheat test suite (`npm test`, 15 tests)
+- `src/__tests__/antiCheat.test.tsx`: anti-cheat test suite (`npm test`, 19 tests)
 - `src/components/Skeleton.tsx`: skeleton loading components with dark mode support
 - `firestore.indexes.json`: composite indexes for results and questions queries
 - `firestore.rules`: security rules (results.update disabled)

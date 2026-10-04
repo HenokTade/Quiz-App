@@ -44,7 +44,7 @@ export default function Home() {
           });
         }
 
-        if (user) {
+        if (user && user.role !== 'admin') {
           const resultsSnapshot = await getDocs(query(collection(db, 'results'), where('userId', '==', user.uid)));
           const userResults: Record<string, Date> = {};
           resultsSnapshot.docs.forEach(doc => {
@@ -138,8 +138,12 @@ export default function Home() {
                     </p>
                   )}
                   {cat.locked && (
-                    <p className="mt-3 text-sm text-red-400 flex items-center gap-1">
-                      🔒 Exam is locked — wait for instructor
+                    <p className={`mt-3 text-sm flex items-center gap-1 ${
+                      user?.role === 'admin'
+                        ? darkMode ? 'text-amber-400' : 'text-amber-600'
+                        : 'text-red-400'
+                    }`}>
+                      🔒 {user?.role === 'admin' ? 'Exam is locked — students cannot access it' : 'Exam is locked — wait for instructor'}
                     </p>
                   )}
                 </div>

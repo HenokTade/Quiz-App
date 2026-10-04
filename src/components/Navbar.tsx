@@ -10,7 +10,8 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const isQuizActive = !quizFinished && quizStartTime > 0;
+  // Anti-theft navigation blocking only applies to students, not admins.
+  const isQuizActive = !quizFinished && quizStartTime > 0 && user?.role !== 'admin';
 
   useEffect(() => {
     if (!isQuizActive) return;
