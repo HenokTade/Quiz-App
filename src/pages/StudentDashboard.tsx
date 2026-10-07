@@ -80,14 +80,26 @@ function StudentView() {
     <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
-          <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Dashboard</h1>
-          <button onClick={() => navigate('/home')} className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">
+          <h1 className={`text-3xl font-bold
+            ${darkMode ? 'text-white' : 'text-gray-900'}
+            animate-[fadeInUp_0.5s_ease-out_0.3s_forwards]`}>Dashboard</h1>
+          <button
+            onClick={() => navigate('/home')}
+            className="bg-indigo-600 text-white px-6 py-2 rounded-lg
+              hover:bg-indigo-700
+              transition-transform duration-100
+              active:scale-[0.95]"
+          >
             Take Quiz
           </button>
         </div>
 
         {loading ? (
-          <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Loading...</p>
+          <div className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <div className="inline-block animate-pulse h-4 w-4 rounded-full
+              bg-indigo-500 dark:bg-indigo-400"></div>
+            <span className="ml-2">Loading dashboard...</span>
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -95,8 +107,14 @@ function StudentView() {
                 { label: 'Total Quizzes Taken', value: results.length, cls: darkMode ? 'text-indigo-400' : 'text-indigo-600' },
                 { label: 'Average Score', value: results.length > 0 ? `${Math.round(results.reduce((a, r) => a + (r.score / r.totalQuestions) * 100, 0) / results.length)}%` : '0%', cls: darkMode ? 'text-green-400' : 'text-green-600' },
                 { label: 'Categories Explored', value: highScores.length, cls: darkMode ? 'text-purple-400' : 'text-purple-600' },
-              ].map(s => (
-                <div key={s.label} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
+              ].map((s, index) => (
+                <div
+                  key={s.label}
+                  className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6
+                    opacity-0 translate-y-4 delay-[${index * 75}ms]
+                    animate-[scaleUp_0.3s_ease_out_forwards]`
+                  }
+                >
                   <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{s.label}</h3>
                   <p className={`text-4xl font-bold ${s.cls}`}>{s.value}</p>
                 </div>
@@ -111,7 +129,14 @@ function StudentView() {
                 ) : (
                   <div className="space-y-3">
                     {highScores.map((hs, i) => (
-                      <div key={i} className={`flex justify-between items-center p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                      <div
+                        key={i}
+                        className={`flex justify-between items-center p-4 rounded-lg
+                          ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}
+                          opacity-0 translate-x-4 delay-[${i * 50}ms]
+                          animate-[fadeInSlideRight_0.3s_ease_out_forwards]`
+                        }
+                      >
                         <div>
                           <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{categories[hs.category] || hs.category}</p>
                           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{hs.attempts} attempt{hs.attempts > 1 ? 's' : ''}</p>
@@ -135,7 +160,16 @@ function StudentView() {
                     {results.slice(0, 10).map(r => {
                       const pct = Math.round((r.score / r.totalQuestions) * 100);
                       return (
-                        <div key={r.id} onClick={() => navigate(`/result/${r.id}`)} className={`flex justify-between items-center p-4 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} transition-colors`}>
+                        <div
+                          key={r.id}
+                          onClick={() => navigate(`/result/${r.id}`)}
+                          className={`flex justify-between items-center p-4 rounded-lg cursor-pointer
+                            ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}
+                            transition-all duration-200
+                            hover:-translate-y-1 hover:shadow-md
+                            active:scale-[0.98]`
+                          }
+                        >
                           <div>
                             <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{categories[r.category] || r.category}</p>
                             <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{new Date(r.date).toLocaleDateString()}</p>

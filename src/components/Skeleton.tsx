@@ -3,14 +3,18 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className = '' }: SkeletonProps) {
+  const randomDelay = Math.random() * 200; // 0-200ms random delay
   return (
-    <div className={`animate-pulse bg-gray-300 dark:bg-gray-600 rounded ${className}`} />
+    <div
+      className={`animate-pulse bg-gray-300 dark:bg-gray-600 rounded ${className}`}
+      style={{ animationDelay: `${randomDelay}ms` }}
+    />
   );
 }
 
-export function CardSkeleton() {
+export function CardSkeleton({ className = '' }: SkeletonProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 ${className}`}>
       <Skeleton className="h-6 w-3/4 mb-3" />
       <Skeleton className="h-4 w-1/2" />
     </div>

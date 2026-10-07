@@ -97,29 +97,38 @@ export default function Home() {
   return (
     <div className={`min-h-screen py-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-6xl mx-auto px-4">
-        <h1 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+        <h1 className={`text-3xl font-bold mb-8
+          ${darkMode ? 'text-white' : 'text-gray-900'}
+          animate-[fadeInUp_0.5s_ease-out_0.3s_forwards]`}>
           Welcome, {user.displayName || 'Student'}!
         </h1>
         <h2 className={`text-xl mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Choose a Category</h2>
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <CardSkeleton key={i} />
+              <CardSkeleton
+                key={i}
+                className={`animate-[pulse-slow_1.5s_ease_in_out_infinite]
+                  delay-[${i * 100}ms]`}
+              />
             ))}
           </div>
         ) : categories.length === 0 ? (
           <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>No categories available yet.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categories.map((cat) => {
+            {categories.map((cat, index) => {
               const blocked = cat.cooldownEnd !== null || cat.takenOnce || (cat.locked === true && user?.role !== 'admin');
               return (
                 <div
                   key={cat.id}
                   onClick={() => !blocked && navigate(`/quiz/${cat.id}`)}
-                  className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6 transition-shadow ${
-                    blocked ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-lg cursor-pointer'
-                  }`}
+                  className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6
+                    transform transition-all duration-200
+                    opacity-0 translate-y-4 delay-[${index * 50}ms]
+                    animate-[fadeInUp_0.3s_ease-out_forwards]
+                    ${blocked ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-1 cursor-pointer'}
+                    ${!blocked && 'active:scale-[0.98]'}`}
                 >
                   <h3 className={`text-xl font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     {cat.name}
