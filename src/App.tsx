@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -7,14 +7,16 @@ import { useStore, User } from './store/useStore';
 import Navbar from './components/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
-import Register from './pages/Register';
-import Home from './pages/Home';
-import Quiz from './pages/Quiz';
-import Results from './pages/Results';
-import ResultDetail from './pages/ResultDetail';
-import StudentDashboard from './pages/StudentDashboard';
-import QuestionsManager from './pages/QuestionsManager';
-import QuizCooldown from './pages/QuizCooldown';
+
+// Pages load on first visit so students never download admin code
+const Register = lazy(() => import('./pages/Register'));
+const Home = lazy(() => import('./pages/Home'));
+const Quiz = lazy(() => import('./pages/Quiz'));
+const Results = lazy(() => import('./pages/Results'));
+const ResultDetail = lazy(() => import('./pages/ResultDetail'));
+const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
+const QuestionsManager = lazy(() => import('./pages/QuestionsManager'));
+const QuizCooldown = lazy(() => import('./pages/QuizCooldown'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useStore();
@@ -49,18 +51,19 @@ function AppContent() {
     return () => unsubscribe();
   }, [setUser]);
 
-  if (loading) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <div className="text-xl text-indigo-600">Loading...</div>
-      </div>
-    );
-  }
+  const loadingScreen = (
+    <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className="text-xl text-indigo-600">Loading...</div>
+    </div>
+  );
+
+  if (loading) return loadingScreen;
 
   return (
     <div className={darkMode ? 'dark' : ''}>
       <Navbar />
       <ErrorBoundary darkMode={darkMode}>
+        <Suspense fallback={loadingScreen}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -74,6 +77,7 @@ function AppContent() {
            <Route path="/admin" element={<Navigate to="/dashboard" />} />
           <Route path="/" element={<Navigate to="/login" />} />
         </Routes>
+        </Suspense>
       </ErrorBoundary>
     </div>
   );
