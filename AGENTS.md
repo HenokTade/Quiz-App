@@ -41,6 +41,7 @@ Build and improve a React/TypeScript quiz app with Firebase backend, Zustand sta
 - Added 3-strike auto-submit: default strike limit 3 (`getStrikeLimit`/`getViolationMessage` in `src/lib/reportViolation.ts`); 2nd violation shows "Final warning … quiz will automatically close and be submitted", 3rd violation saves the pending answer, shows a 2.5s auto-submit countdown on the blackout screen, then finishes and navigates to `/results`; same flow on QuizCooldown blocked page; per-category `maxViolations` overrides the default 3
 - Admin exempt from anti-cheat: `reportViolation()` returns early for `role === 'admin'` (no count, no Firestore write); Quiz.tsx skips tab-switch listeners, blackout, right-click/keyboard/text-selection blocks for admin; QuizCooldown skips violation recording/monitoring; Navbar nav-blocking (`isQuizActive`) excludes admin
 - Admin exempt from retake restrictions: Quiz.tsx already bypassed admin (kept); Home.tsx no longer computes `takenOnce`/`cooldownEnd` for admin (cards always clickable, no "Taken"/cooldown badges), lock badge hidden for admin
+- Grade grouping: admin assigns `grade` per category from a dynamic grade list (Firestore `config/grades` doc `{ list: number[] }`, defaults to 4, 5, 8, 9 via `DEFAULT_GRADES`; every grade `<select>` has a "+ Add grade…" option that swaps in a number input, saves the grade and selects it — add only, no delete) in QuestionsManager (add form + inline edit, badge in list, and a Grade field in the Settings tab); Questions/Bulk Upload/Settings tabs share a grade pill filter (`gradeFilter`) that narrows every category dropdown and the question list, clearing selections that fall outside the chosen grade; Home is a two-step drill-down: no `?grade=` → "Choose your grade" grid of large gradient grade cards (big grade numeral watermark, exam count, "N available" for students; only grades that have exams, "Other" for ungraded, admin-only "All exams" card); clicking pushes `?grade=X` (browser Back returns to the grade picker) and lists that grade's exam cards with a "← All grades" link; admin "All exams" view renders one section per grade (`src/lib/grades.ts`)
 
 ### In Progress
 - (none)
@@ -61,7 +62,7 @@ Build and improve a React/TypeScript quiz app with Firebase backend, Zustand sta
 - Blackout overlay must stay always-mounted with `visibility` managed via ref (instant sync flip) — conditionally rendering it reintroduces the mobile app-switcher snapshot race
 
 ## Next Steps
-- Deploy updated Firestore rules (new `violations` collection): `firebase deploy --only firestore:rules`
+- Deploy updated Firestore rules (new `violations` and `config` collections): `firebase deploy --only firestore:rules`
 
 ## Critical Context
 - Firebase composite indexes are required for results queries on userId+categoryId and userId+date — firestore.indexes.json is created but must be deployed via `firebase deploy --only firestore:indexes`

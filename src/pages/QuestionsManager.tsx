@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, getDoc, addDoc, deleteDoc, doc, setDoc, updateDoc, query, where, arrayUnion } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { DEFAULT_GRADES, gradeKey, gradeLabel } from '../lib/grades';
 import { useStore, Question, QuizSettings, RetakeMode, FeedbackMode } from '../store/useStore';
 
-interface Category { id: string; name: string; quizTime?: number; retakeMode?: RetakeMode; retakeCooldown?: number; feedbackMode?: FeedbackMode; shuffleQuestions?: boolean; locked?: boolean }
+interface Category { id: string; name: string; quizTime?: number; retakeMode?: RetakeMode; retakeCooldown?: number; feedbackMode?: FeedbackMode; shuffleQuestions?: boolean; locked?: boolean; grade?: number | null }
 
 interface BulkUploadSection {
   section_title: string;
@@ -19,10 +20,16 @@ export default function QuestionsManager() {
   const [activeTab, setActiveTab] = useState<'categories' | 'questions' | 'bulk' | 'settings'>('categories');
   const [categories, setCategories] = useState<Category[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [grades, setGrades] = useState<number[]>(DEFAULT_GRADES);
+  const [addingGradeFor, setAddingGradeFor] = useState<string | null>(null);
+  const [newGrade, setNewGrade] = useState('');
+  const [gradeError, setGradeError] = useState('');
   const [newCategory, setNewCategory] = useState('');
+  const [newCategoryGrade, setNewCategoryGrade] = useState<number | null>(null);
   const [categorySuccess, setCategorySuccess] = useState('');
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
+  const [editCategoryGrade, setEditCategoryGrade] = useState<number | null>(null);
   const [newQuestion, setNewQuestion] = useState({
     question: '', option1: '', option2: '', option3: '', option4: '',
     correctAnswer: 0, explanation: '', category: ''
@@ -36,7 +43,9 @@ export default function QuestionsManager() {
   const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [gradeFilter, setGradeFilter] = useState('all');
   const [settingsCategory, setSettingsCategory] = useState('');
+  const [settingsGrade, setSettingsGrade] = useState<number | null>(null);
   const [quizTime, setQuizTime] = useState(5);
   const [retakeMode, setRetakeMode] = useState<RetakeMode>('unlimited');
   const [retakeCooldown, setRetakeCooldown] = useState(0);
@@ -46,7 +55,31 @@ export default function QuestionsManager() {
   const [settingsSuccess, setSettingsSuccess] = useState('');
   const [settingsError, setSettingsError] = useState('');
 
-  useEffect(() => { fetchCategories(); fetchQuestions(); }, []);
+  useEffect(() => { fetchGrades(); fetchCategories(); fetchQuestions(); }, []);
+
+  const fetchGrades = async () => {
+    const snap = await getDoc(doc(db, 'config', 'grades'));
+    const list = snap.data()?.list;
+    if (Array.isArray(list)) setGrades(list);
+  };
+
+  const cancelAddGrade = () => { setAddingGradeFor(null); setNewGrade(''); setGradeError(''); };
+
+  const handleAddGrade = async (onAdded: (g: number) => void) => {
+    setGradeError('');
+    const value = Number(newGrade);
+    if (!newGrade.trim() || !Number.isInteger(value) || value < 1) { setGradeError('Enter a whole number, e.g. 6'); return; }
+    if (allGrades.includes(value)) { onAdded(value); cancelAddGrade(); return; }
+    try {
+      // First save seeds the doc with the defaults so they aren't lost
+      await setDoc(doc(db, 'config', 'grades'), { list: arrayUnion(...grades, value) }, { merge: true });
+      setGrades([...grades, value]);
+      onAdded(value);
+      cancelAddGrade();
+    } catch (err) {
+      setGradeError(`Error: ${err instanceof Error ? err.message : 'Unknown'}`);
+    }
+  };
 
   const fetchCategories = async () => {
     const snapshot = await getDocs(collection(db, 'categories'));
@@ -60,7 +93,16 @@ export default function QuestionsManager() {
     setQuestions(qs);
   };
 
+  // Include grades already used by categories even if missing from the saved list
+  const allGrades = [...new Set([...grades, ...categories.map(c => c.grade).filter((g): g is number => !!g)])].sort((a, b) => a - b);
+
+  const gradeCategories = gradeFilter === 'all'
+    ? categories
+    : categories.filter(c => gradeKey(c.grade) === gradeFilter);
+  const gradeCategoryIds = new Set(gradeCategories.map(c => c.id));
+
   const filteredQuestions = questions.filter(q => {
+    if (!gradeCategoryIds.has(q.category)) return false;
     const matchesSearch = q.question.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !filterCategory || q.category === filterCategory;
     return matchesSearch && matchesCategory;
@@ -71,6 +113,7 @@ export default function QuestionsManager() {
     if (!newCategory.trim()) return;
     await addDoc(collection(db, 'categories'), {
       name: newCategory,
+      grade: newCategoryGrade,
       quizTime: 5,
       retakeMode: 'unlimited',
       retakeCooldown: 0,
@@ -79,6 +122,7 @@ export default function QuestionsManager() {
       locked: false
     });
     setNewCategory('');
+    setNewCategoryGrade(null);
     setCategorySuccess('Category added successfully!');
     setTimeout(() => setCategorySuccess(''), 3000);
     fetchCategories();
@@ -92,17 +136,48 @@ export default function QuestionsManager() {
     fetchQuestions();
   };
 
-  const handleEditCategory = (cat: Category) => { setEditCategoryId(cat.id); setEditCategoryName(cat.name); };
+  const handleEditCategory = (cat: Category) => { setEditCategoryId(cat.id); setEditCategoryName(cat.name); setEditCategoryGrade(cat.grade ?? null); };
 
   const handleUpdateCategory = async () => {
     if (!editCategoryId || !editCategoryName.trim()) return;
-    await updateDoc(doc(db, 'categories', editCategoryId), { name: editCategoryName });
+    await updateDoc(doc(db, 'categories', editCategoryId), { name: editCategoryName, grade: editCategoryGrade });
     setEditCategoryId(null);
     setEditCategoryName('');
+    setEditCategoryGrade(null);
     fetchCategories();
   };
 
-  const handleCancelEditCategory = () => { setEditCategoryId(null); setEditCategoryName(''); };
+  const handleCancelEditCategory = () => { setEditCategoryId(null); setEditCategoryName(''); setEditCategoryGrade(null); };
+
+  // Grade dropdown with a "+ Add grade…" option that swaps in a number input; the new grade gets selected
+  const gradeSelect = (id: string, value: number | null, onChange: (g: number | null) => void, cls: string) => (
+    addingGradeFor === id ? (
+      <div className="flex flex-col">
+        <div className="flex items-center gap-2">
+          <input type="number" min={1} step={1} autoFocus value={newGrade} placeholder="Grade, e.g. 6"
+            onChange={e => setNewGrade(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); handleAddGrade(onChange); }
+              if (e.key === 'Escape') cancelAddGrade();
+            }}
+            className={`w-32 ${cls}`} />
+          <button type="button" onClick={() => handleAddGrade(onChange)} className="text-indigo-500 hover:underline text-sm">Add</button>
+          <button type="button" onClick={cancelAddGrade} className="text-gray-500 hover:underline text-sm">Cancel</button>
+        </div>
+        {gradeError && <p className="mt-1 text-sm text-red-500">{gradeError}</p>}
+      </div>
+    ) : (
+      <select value={value ?? ''} className={cls}
+        onChange={e => {
+          if (e.target.value === '__add__') { setNewGrade(''); setGradeError(''); setAddingGradeFor(id); return; }
+          onChange(e.target.value ? parseInt(e.target.value) : null);
+        }}>
+        <option value="">No grade</option>
+        {allGrades.map(g => <option key={g} value={g}>{gradeLabel(g)}</option>)}
+        <option value="__add__">+ Add grade…</option>
+      </select>
+    )
+  );
 
   const handleAddQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,10 +272,20 @@ export default function QuestionsManager() {
     } finally { setIsUploading(false); }
   };
 
+  const handleGradeFilterChange = (key: string) => {
+    setGradeFilter(key);
+    const inGrade = (catId: string) => key === 'all' || gradeKey(categories.find(c => c.id === catId)?.grade) === key;
+    if (!inGrade(newQuestion.category)) setNewQuestion(prev => ({ ...prev, category: '' }));
+    if (!inGrade(filterCategory)) setFilterCategory('');
+    if (!inGrade(bulkCategory)) setBulkCategory('');
+    if (!inGrade(settingsCategory)) setSettingsCategory('');
+  };
+
   const handleSettingsCategoryChange = (catId: string) => {
     setSettingsCategory(catId);
     const cat = categories.find(c => c.id === catId);
     if (cat) {
+      setSettingsGrade(cat.grade ?? null);
       setQuizTime(cat.quizTime ?? 5);
       setRetakeMode(cat.retakeMode ?? 'unlimited');
       setRetakeCooldown(cat.retakeCooldown ?? 0);
@@ -227,6 +312,7 @@ export default function QuestionsManager() {
     if (!settingsCategory) { setSettingsError('Please select a category'); return; }
     try {
       await updateDoc(doc(db, 'categories', settingsCategory), {
+        grade: settingsGrade,
         quizTime: quizTime,
         retakeMode: retakeMode,
         retakeCooldown: retakeMode === 'cooldown' ? retakeCooldown : 0,
@@ -264,6 +350,25 @@ export default function QuestionsManager() {
           {navBtn('settings', 'Settings')}
         </div>
 
+        {activeTab !== 'categories' && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 -mx-4 px-4">
+            <span className={`shrink-0 text-sm font-medium mr-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Grade:</span>
+            {[{ key: 'all', label: 'All' }, ...allGrades.map(g => ({ key: gradeKey(g), label: gradeLabel(g) })), { key: 'other', label: 'Other' }].map(tab => (
+              <button key={tab.key} onClick={() => handleGradeFilterChange(tab.key)}
+                className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  gradeFilter === tab.key
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
+                    : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 shadow-sm hover:bg-gray-100'
+                }`}>
+                {tab.label}
+                <span className="ml-1.5 opacity-70">
+                  {tab.key === 'all' ? categories.length : categories.filter(c => gradeKey(c.grade) === tab.key).length}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {activeTab === 'categories' && (
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
             <div className="flex justify-between items-center mb-4">
@@ -273,6 +378,7 @@ export default function QuestionsManager() {
             <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-4 mb-6">
               <input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="Category name"
                 className={`flex-1 p-3 border rounded-lg ${iCls}`} />
+              {gradeSelect('new', newCategoryGrade, setNewCategoryGrade, `p-3 border rounded-lg ${iCls}`)}
               <button type="submit" className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">Add</button>
             </form>
             {categorySuccess && (
@@ -285,12 +391,20 @@ export default function QuestionsManager() {
                     <div className="flex gap-2 flex-1">
                       <input type="text" value={editCategoryName} onChange={e => setEditCategoryName(e.target.value)}
                         className={`flex-1 p-2 border rounded ${darkMode ? 'bg-gray-600 text-white' : 'bg-white'}`} />
+                      {gradeSelect('edit', editCategoryGrade, setEditCategoryGrade, `p-2 border rounded ${darkMode ? 'bg-gray-600 text-white' : 'bg-white'}`)}
                       <button onClick={handleUpdateCategory} className="text-green-500 hover:underline">Save</button>
                       <button onClick={handleCancelEditCategory} className="text-gray-500 hover:underline">Cancel</button>
                     </div>
                   ) : (
                     <>
-                      <span className={darkMode ? 'text-white' : 'text-gray-900'}>{cat.name}</span>
+                      <span className={`flex items-center gap-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {cat.name}
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          cat.grade
+                            ? darkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700'
+                            : darkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
+                        }`}>{gradeLabel(cat.grade)}</span>
+                      </span>
                       <div className="flex gap-3">
                         <button onClick={() => handleEditCategory(cat)} className="text-indigo-500 hover:underline">Edit</button>
                         <button onClick={() => handleDeleteCategory(cat.id)} className="text-red-500 hover:underline">Delete</button>
@@ -337,7 +451,7 @@ export default function QuestionsManager() {
                   <select value={newQuestion.category} onChange={e => setNewQuestion({ ...newQuestion, category: e.target.value })}
                     className={`w-full p-3 border rounded-lg ${iCls}`}>
                     <option value="">Select category</option>
-                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                    {gradeCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -350,7 +464,7 @@ export default function QuestionsManager() {
                 className={`flex-1 p-3 border rounded-lg ${iCls}`} />
               <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className={`p-3 border rounded-lg ${iCls}`}>
                 <option value="">All Categories</option>
-                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                {gradeCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
               </select>
               <button onClick={exportToCSV} disabled={filteredQuestions.length === 0}
                 className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50">Export CSV</button>
@@ -408,7 +522,7 @@ export default function QuestionsManager() {
               <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Select Category</label>
               <select value={bulkCategory} onChange={e => setBulkCategory(e.target.value)} className={`w-full p-3 border rounded-lg ${iCls}`}>
                 <option value="">Select category</option>
-                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                {gradeCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
               </select>
             </div>
             <div className="mb-4">
@@ -458,12 +572,16 @@ export default function QuestionsManager() {
               <select value={settingsCategory} onChange={e => handleSettingsCategoryChange(e.target.value)}
                 className={`w-full p-3 border rounded-lg ${iCls}`}>
                 <option value="">Select a category</option>
-                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                {gradeCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
               </select>
             </div>
 
             {settingsCategory && (
               <>
+                <div className="mb-6">
+                  <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Grade</label>
+                  {gradeSelect('settings', settingsGrade, setSettingsGrade, `w-full p-3 border rounded-lg ${iCls}`)}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                   <div>
                     <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
