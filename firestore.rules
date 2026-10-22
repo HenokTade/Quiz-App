@@ -23,15 +23,21 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Users — the user themselves or any admin can read; only the user can write their own doc
+    // Users — the user themselves or any admin can read; users can only create themselves as
+    // students and can never change their own role; only admins can change roles
     match /users/{uid} {
       allow read: if request.auth != null && (
         request.auth.uid == uid
         || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
-      allow create: if request.auth.uid == uid;
-      allow update: if request.auth.uid == uid
-        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.role == 'student';
+      allow update: if request.auth != null && (
+        (request.auth.uid == uid
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
       allow delete: if request.auth != null
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
