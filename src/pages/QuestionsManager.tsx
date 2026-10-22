@@ -39,6 +39,9 @@ export default function QuestionsManager() {
   const [bulkJson, setBulkJson] = useState('');
   const [bulkError, setBulkError] = useState('');
   const [bulkSuccess, setBulkSuccess] = useState('');
+  const [bulkGrade, setBulkGrade] = useState('');
+  const [newQuestionGrade, setNewQuestionGrade] = useState('');
+  const [questionError, setQuestionError] = useState('');
   const [bulkCategory, setBulkCategory] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,6 +102,8 @@ export default function QuestionsManager() {
   const gradeCategories = gradeFilter === 'all'
     ? categories
     : categories.filter(c => gradeKey(c.grade) === gradeFilter);
+  const newQuestionGradeCategories = categories.filter(c => gradeKey(c.grade) === newQuestionGrade);
+  const bulkGradeCategories = categories.filter(c => gradeKey(c.grade) === bulkGrade);
   const gradeCategoryIds = new Set(gradeCategories.map(c => c.id));
 
   const filteredQuestions = questions.filter(q => {
@@ -181,7 +186,10 @@ export default function QuestionsManager() {
 
   const handleAddQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newQuestion.question || !newQuestion.category) return;
+    setQuestionError('');
+    if (!newQuestionGrade) { setQuestionError('Please select a grade'); return; }
+    if (!newQuestion.category) { setQuestionError('Please select a category'); return; }
+    if (!newQuestion.question.trim()) { setQuestionError('Please enter the question'); return; }
     await addDoc(collection(db, 'questions'), {
       question: newQuestion.question,
       options: [newQuestion.option1, newQuestion.option2, newQuestion.option3, newQuestion.option4],
@@ -190,7 +198,8 @@ export default function QuestionsManager() {
       category: newQuestion.category,
       createdAt: Date.now()
     });
-    setNewQuestion({ question: '', option1: '', option2: '', option3: '', option4: '', correctAnswer: 0, explanation: '', category: '' });
+    // Keep the grade/category selected so several questions can be added in a row
+    setNewQuestion(prev => ({ question: '', option1: '', option2: '', option3: '', option4: '', correctAnswer: 0, explanation: '', category: prev.category }));
     fetchQuestions();
   };
 
@@ -246,6 +255,7 @@ export default function QuestionsManager() {
 
   const handleBulkUpload = async () => {
     setBulkError(''); setBulkSuccess('');
+    if (!bulkGrade) { setBulkError('Please select a grade'); return; }
     if (!bulkCategory) { setBulkError('Please select a category'); return; }
     if (!bulkJson.trim()) { setBulkError('Please paste JSON data'); return; }
     const validation = validateBulkJson(bulkJson);
@@ -275,10 +285,7 @@ export default function QuestionsManager() {
   const handleGradeFilterChange = (key: string) => {
     setGradeFilter(key);
     const inGrade = (catId: string) => key === 'all' || gradeKey(categories.find(c => c.id === catId)?.grade) === key;
-    if (!inGrade(newQuestion.category)) setNewQuestion(prev => ({ ...prev, category: '' }));
     if (!inGrade(filterCategory)) setFilterCategory('');
-    if (!inGrade(bulkCategory)) setBulkCategory('');
-    if (!inGrade(settingsCategory)) setSettingsCategory('');
   };
 
   const handleSettingsCategoryChange = (catId: string) => {
@@ -350,25 +357,6 @@ export default function QuestionsManager() {
           {navBtn('settings', 'Settings')}
         </div>
 
-        {activeTab !== 'categories' && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 -mx-4 px-4">
-            <span className={`shrink-0 text-sm font-medium mr-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Grade:</span>
-            {[{ key: 'all', label: 'All' }, ...allGrades.map(g => ({ key: gradeKey(g), label: gradeLabel(g) })), { key: 'other', label: 'Other' }].map(tab => (
-              <button key={tab.key} onClick={() => handleGradeFilterChange(tab.key)}
-                className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  gradeFilter === tab.key
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
-                    : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 shadow-sm hover:bg-gray-100'
-                }`}>
-                {tab.label}
-                <span className="ml-1.5 opacity-70">
-                  {tab.key === 'all' ? categories.length : categories.filter(c => gradeKey(c.grade) === tab.key).length}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-
         {activeTab === 'categories' && (
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
             <div className="flex justify-between items-center mb-4">
@@ -421,6 +409,27 @@ export default function QuestionsManager() {
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
             <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Add Question</h2>
             <form onSubmit={handleAddQuestion} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>1. Select Grade</label>
+                  <select value={newQuestionGrade} onChange={e => { setNewQuestionGrade(e.target.value); setNewQuestion({ ...newQuestion, category: '' }); }}
+                    className={`w-full p-3 border rounded-lg ${iCls}`}>
+                    <option value="">Select grade</option>
+                    {allGrades.map(g => <option key={g} value={gradeKey(g)}>{gradeLabel(g)}</option>)}
+                    {categories.some(c => !c.grade) && <option value="other">Other (no grade)</option>}
+                  </select>
+                </div>
+                <div>
+                  <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>2. Select Category</label>
+                  <select value={newQuestion.category} onChange={e => setNewQuestion({ ...newQuestion, category: e.target.value })} disabled={!newQuestionGrade}
+                    className={`w-full p-3 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${iCls}`}>
+                    <option value="">
+                      {!newQuestionGrade ? 'Select a grade first' : newQuestionGradeCategories.length === 0 ? 'No categories in this grade' : 'Select category'}
+                    </option>
+                    {newQuestionGradeCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                  </select>
+                </div>
+              </div>
               {[
                 { label: 'Question', key: 'question', type: 'textarea' },
                 { label: 'Option 1', key: 'option1' }, { label: 'Option 2', key: 'option2' },
@@ -438,23 +447,14 @@ export default function QuestionsManager() {
                     className={`w-full p-3 border rounded-lg ${iCls}`} />
                 </div>
               ))}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Correct Answer</label>
-                  <select value={newQuestion.correctAnswer} onChange={e => setNewQuestion({ ...newQuestion, correctAnswer: parseInt(e.target.value) })}
-                    className={`w-full p-3 border rounded-lg ${iCls}`}>
-                    {[0, 1, 2, 3].map(i => <option key={i} value={i}>Option {i + 1}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Category</label>
-                  <select value={newQuestion.category} onChange={e => setNewQuestion({ ...newQuestion, category: e.target.value })}
-                    className={`w-full p-3 border rounded-lg ${iCls}`}>
-                    <option value="">Select category</option>
-                    {gradeCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                  </select>
-                </div>
+              <div>
+                <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Correct Answer</label>
+                <select value={newQuestion.correctAnswer} onChange={e => setNewQuestion({ ...newQuestion, correctAnswer: parseInt(e.target.value) })}
+                  className={`w-full p-3 border rounded-lg ${iCls}`}>
+                  {[0, 1, 2, 3].map(i => <option key={i} value={i}>Option {i + 1}</option>)}
+                </select>
               </div>
+              {questionError && <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 rounded-lg">{questionError}</div>}
               <button type="submit" className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">Add Question</button>
             </form>
 
@@ -462,6 +462,11 @@ export default function QuestionsManager() {
             <div className="flex flex-col md:flex-row gap-4 mb-6">
               <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search questions..."
                 className={`flex-1 p-3 border rounded-lg ${iCls}`} />
+              <select value={gradeFilter} onChange={e => handleGradeFilterChange(e.target.value)} className={`p-3 border rounded-lg ${iCls}`}>
+                <option value="all">All Grades</option>
+                {allGrades.map(g => <option key={g} value={gradeKey(g)}>{gradeLabel(g)}</option>)}
+                {categories.some(c => !c.grade) && <option value="other">Other (no grade)</option>}
+              </select>
               <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className={`p-3 border rounded-lg ${iCls}`}>
                 <option value="">All Categories</option>
                 {gradeCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
@@ -518,12 +523,26 @@ export default function QuestionsManager() {
         {activeTab === 'bulk' && (
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
             <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Bulk Upload Questions (JSON)</h2>
-            <div className="mb-4">
-              <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Select Category</label>
-              <select value={bulkCategory} onChange={e => setBulkCategory(e.target.value)} className={`w-full p-3 border rounded-lg ${iCls}`}>
-                <option value="">Select category</option>
-                {gradeCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>1. Select Grade</label>
+                <select value={bulkGrade} onChange={e => { setBulkGrade(e.target.value); setBulkCategory(''); }}
+                  className={`w-full p-3 border rounded-lg ${iCls}`}>
+                  <option value="">Select grade</option>
+                  {allGrades.map(g => <option key={g} value={gradeKey(g)}>{gradeLabel(g)}</option>)}
+                  {categories.some(c => !c.grade) && <option value="other">Other (no grade)</option>}
+                </select>
+              </div>
+              <div>
+                <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>2. Select Category</label>
+                <select value={bulkCategory} onChange={e => setBulkCategory(e.target.value)} disabled={!bulkGrade}
+                  className={`w-full p-3 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${iCls}`}>
+                  <option value="">
+                    {!bulkGrade ? 'Select a grade first' : bulkGradeCategories.length === 0 ? 'No categories in this grade' : 'Select category'}
+                  </option>
+                  {bulkGradeCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                </select>
+              </div>
             </div>
             <div className="mb-4">
               <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Paste JSON Data</label>
@@ -572,7 +591,7 @@ export default function QuestionsManager() {
               <select value={settingsCategory} onChange={e => handleSettingsCategoryChange(e.target.value)}
                 className={`w-full p-3 border rounded-lg ${iCls}`}>
                 <option value="">Select a category</option>
-                {gradeCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
               </select>
             </div>
 
