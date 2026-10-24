@@ -106,10 +106,11 @@ export default function Register() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-full border-4 border-indigo-500 shadow-xl mb-4 bg-white overflow-hidden">
-            <img src="/logo.jpg" alt="Finote Tsidk Sunday School Logo" className="w-full h-full object-cover" />
+            <img src="/logo.jpg" alt="Fenote Tsidk Sunday School Logo" className="w-full h-full object-cover" />
           </div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-1">Fenote Tsidk Sunday School</p>
           <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Create account</h1>
-          <p className={`mt-1 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Get started with QuizApp today</p>
+          <p className={`mt-1 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Get started with Fenote Exam today</p>
         </div>
 
         {/* Error */}

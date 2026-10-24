@@ -56,7 +56,10 @@ export default function Navbar() {
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/" onClick={(e) => handleNavClick(e, '/')} className="flex items-center gap-2 text-xl font-bold text-indigo-600">
             <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-full object-cover border border-indigo-500/30" />
-            <span>QuizApp</span>
+            <span className="flex flex-col leading-tight">
+              <span>Fenote Exam</span>
+              <span className={`text-[11px] font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Fenote Tsidk Sunday School</span>
+            </span>
           </Link>
           <div className="flex items-center gap-2">
             <button

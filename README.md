@@ -1,4 +1,4 @@
-# Quiz App
+# Fenote Exam
 
 A full-featured exam/quiz application built with React, Firebase, and Tailwind CSS. Students take timed exams organized by grade; admins manage grades, exams, and questions and monitor exam integrity in real time.
 
