@@ -126,7 +126,7 @@ export default function Admin() {
     <button onClick={() => setActiveTab(tab)}
       className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
         activeTab === tab
-          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+          ? 'bg-teal-600 text-white shadow-lg shadow-teal-500/30'
           : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100'
       }`}>{label}</button>
   );
@@ -223,8 +223,8 @@ export default function Admin() {
                   onChange={e => setUserSearch(e.target.value)}
                   onKeyDown={e => e.key === 'Escape' && setUserSearch('')}
                   className={`w-full text-sm pl-10 pr-4 py-2.5 rounded-lg border transition-colors ${
-                    darkMode ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-400 focus:border-indigo-500' : 'bg-white text-gray-900 border-gray-300 placeholder-gray-400 focus:border-indigo-500'
-                  } outline-none focus:ring-2 focus:ring-indigo-500/30`}
+                    darkMode ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-400 focus:border-teal-500' : 'bg-white text-gray-900 border-gray-300 placeholder-gray-400 focus:border-teal-500'
+                  } outline-none focus:ring-2 focus:ring-teal-500/30`}
                 />
               </div>
               <button
@@ -298,7 +298,7 @@ export default function Admin() {
               <div className="flex gap-3 flex-wrap items-center">
                 <button onClick={() => setSortMode(prev => prev === 'recent' ? 'alpha' : 'recent')}
                   className={`text-sm px-3 py-2 rounded-lg border transition-colors ${sortMode === 'alpha'
-                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    ? 'bg-teal-600 text-white border-teal-600'
                     : darkMode ? 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
                   }`}>
                   {sortMode === 'alpha' ? 'A → Z' : 'Recent'}
@@ -364,7 +364,7 @@ export default function Admin() {
                           </td>
                           <td className="py-3 px-2 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => navigate(`/result/${r.id}`)} className="text-indigo-500 hover:text-indigo-400 text-xs font-medium">View</button>
+                              <button onClick={() => navigate(`/result/${r.id}`)} className="text-teal-500 hover:text-teal-400 text-xs font-medium">View</button>
                               <button onClick={() => handleDeleteUserResult(r.id)} className="text-red-500 hover:text-red-400 text-xs font-medium">Delete</button>
                             </div>
                           </td>

@@ -102,7 +102,7 @@ export default function ResultDetail() {
   if (loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <p className="text-indigo-600">Loading...</p>
+        <p className="text-teal-600">Loading...</p>
       </div>
     );
   }
@@ -112,7 +112,7 @@ export default function ResultDetail() {
       <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <div className="text-center">
           <p className={`text-xl mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{error || 'Result not found'}</p>
-          <button onClick={() => navigate('/dashboard')} className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">
+          <button onClick={() => navigate('/dashboard')} className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700">
             Back to Dashboard
           </button>
         </div>
@@ -127,7 +127,7 @@ export default function ResultDetail() {
       <div className="max-w-2xl mx-auto px-4">
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6 mb-6`}>
           <div className="flex items-center justify-between mb-4">
-            <button onClick={() => navigate('/dashboard')} className="text-indigo-500 hover:text-indigo-400">
+            <button onClick={() => navigate('/dashboard')} className="text-teal-500 hover:text-teal-400">
               ← Back to Dashboard
             </button>
             <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -172,7 +172,7 @@ export default function ResultDetail() {
                     {notAnswered ? (
                       <>
                         <p className="text-gray-500">— Not answered</p>
-                        <p className="text-indigo-400 mt-1">
+                        <p className="text-teal-400 mt-1">
                           Correct: {correctLetter}. {correctAnswer}
                         </p>
                         {answer.explanation && (

@@ -166,7 +166,7 @@ export default function QuestionsManager() {
               if (e.key === 'Escape') cancelAddGrade();
             }}
             className={`w-32 ${cls}`} />
-          <button type="button" onClick={() => handleAddGrade(onChange)} className="text-indigo-500 hover:underline text-sm">Add</button>
+          <button type="button" onClick={() => handleAddGrade(onChange)} className="text-teal-500 hover:underline text-sm">Add</button>
           <button type="button" onClick={cancelAddGrade} className="text-gray-500 hover:underline text-sm">Cancel</button>
         </div>
         {gradeError && <p className="mt-1 text-sm text-red-500">{gradeError}</p>}
@@ -339,7 +339,7 @@ export default function QuestionsManager() {
     <button onClick={() => setActiveTab(tab)}
       className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
         activeTab === tab
-          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+          ? 'bg-teal-600 text-white shadow-lg shadow-teal-500/30'
           : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100'
       }`}>{label}</button>
   );
@@ -361,13 +361,13 @@ export default function QuestionsManager() {
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Manage Categories</h2>
-              <button onClick={() => { fetchCategories(); fetchQuestions(); }} className="text-indigo-500 hover:text-indigo-400 text-sm">Refresh</button>
+              <button onClick={() => { fetchCategories(); fetchQuestions(); }} className="text-teal-500 hover:text-teal-400 text-sm">Refresh</button>
             </div>
             <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-4 mb-6">
               <input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="Category name"
                 className={`flex-1 p-3 border rounded-lg ${iCls}`} />
               {gradeSelect('new', newCategoryGrade, setNewCategoryGrade, `p-3 border rounded-lg ${iCls}`)}
-              <button type="submit" className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">Add</button>
+              <button type="submit" className="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700">Add</button>
             </form>
             {categorySuccess && (
               <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-lg">{categorySuccess}</div>
@@ -389,12 +389,12 @@ export default function QuestionsManager() {
                         {cat.name}
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
                           cat.grade
-                            ? darkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700'
+                            ? darkMode ? 'bg-teal-900/50 text-teal-300' : 'bg-teal-100 text-teal-700'
                             : darkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
                         }`}>{gradeLabel(cat.grade)}</span>
                       </span>
                       <div className="flex gap-3">
-                        <button onClick={() => handleEditCategory(cat)} className="text-indigo-500 hover:underline">Edit</button>
+                        <button onClick={() => handleEditCategory(cat)} className="text-teal-500 hover:underline">Edit</button>
                         <button onClick={() => handleDeleteCategory(cat.id)} className="text-red-500 hover:underline">Delete</button>
                       </div>
                     </>
@@ -455,7 +455,7 @@ export default function QuestionsManager() {
                 </select>
               </div>
               {questionError && <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 rounded-lg">{questionError}</div>}
-              <button type="submit" className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">Add Question</button>
+              <button type="submit" className="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700">Add Question</button>
             </form>
 
             <h3 className={`text-xl font-semibold mt-8 mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Existing Questions ({filteredQuestions.length})</h3>
@@ -509,7 +509,7 @@ export default function QuestionsManager() {
                         <p className="text-sm text-green-500">Correct: {q.options[q.correctAnswer]}</p>
                       </div>
                       <div className="flex gap-3 shrink-0">
-                        <button onClick={() => handleEditQuestion(q)} className="text-indigo-500 hover:underline">Edit</button>
+                        <button onClick={() => handleEditQuestion(q)} className="text-teal-500 hover:underline">Edit</button>
                         <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-500 hover:underline">Delete</button>
                       </div>
                     </div>
@@ -553,7 +553,7 @@ export default function QuestionsManager() {
             {bulkError && <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 rounded-lg">{bulkError}</div>}
             {bulkSuccess && <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-lg">{bulkSuccess}</div>}
             <button onClick={handleBulkUpload} disabled={isUploading}
-              className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              className="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed">
               {isUploading ? 'Uploading...' : 'Upload Questions'}
             </button>
             <div className={`mt-6 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
@@ -647,11 +647,11 @@ export default function QuestionsManager() {
                       { value: 'none' as FeedbackMode, label: 'Not shown', desc: 'No feedback displayed at all — only total score' },
                     ].map(opt => (
                       <label key={opt.value}
-                        className={`flex items-center gap-3 p-4 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} ${feedbackMode === opt.value ? (darkMode ? 'ring-2 ring-indigo-500' : 'ring-2 ring-indigo-400') : ''}`}>
+                        className={`flex items-center gap-3 p-4 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} ${feedbackMode === opt.value ? (darkMode ? 'ring-2 ring-teal-500' : 'ring-2 ring-teal-400') : ''}`}>
                         <input type="radio" name="feedbackMode" value={opt.value}
                           checked={feedbackMode === opt.value}
                           onChange={e => e.target.checked && setFeedbackMode(opt.value)}
-                          className="w-4 h-4 text-indigo-600 focus:ring-indigo-500" />
+                          className="w-4 h-4 text-teal-600 focus:ring-teal-500" />
                         <div>
                           <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             {opt.label}
@@ -672,7 +672,7 @@ export default function QuestionsManager() {
                   <label className="flex items-center gap-3 cursor-pointer select-none">
                     <div
                       onClick={() => setShuffleQuestions(!shuffleQuestions)}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${shuffleQuestions ? 'bg-indigo-600' : 'bg-gray-400'}`}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${shuffleQuestions ? 'bg-teal-600' : 'bg-gray-400'}`}
                     >
                       <div
                         className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${shuffleQuestions ? 'translate-x-5' : 'translate-x-0'}`}
@@ -720,7 +720,7 @@ export default function QuestionsManager() {
                 )}
 
                 <button onClick={handleSaveSettings}
-                  className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
+                  className="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700">
                   Save Settings
                 </button>
               </>

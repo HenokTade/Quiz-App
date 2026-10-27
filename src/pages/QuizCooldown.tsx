@@ -111,7 +111,7 @@ export default function QuizCooldown() {
         ) : (
           <button
             onClick={() => navigate(-1)}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors text-lg"
+            className="w-full py-3 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-xl transition-colors text-lg"
           >
             Return to Quiz
           </button>

@@ -53,7 +53,7 @@ function AppContent() {
 
   const loadingScreen = (
     <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <div className="text-xl text-indigo-600">Loading...</div>
+      <div className="text-xl text-teal-600">Loading...</div>
     </div>
   );
 

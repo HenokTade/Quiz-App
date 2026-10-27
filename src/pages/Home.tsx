@@ -22,46 +22,46 @@ interface Category {
 // Soft tinted palettes, cycled per grade card; literal class strings so Tailwind keeps them
 const GRADE_PALETTES = [
   {
-    light: 'from-indigo-50 to-indigo-100 text-indigo-900 ring-indigo-200/70 shadow-indigo-200/50',
-    dark: 'from-indigo-950/70 to-gray-800 text-indigo-100 ring-indigo-800/40 shadow-black/30',
-    mark: 'text-indigo-300', darkMark: 'text-indigo-400/40',
-    pill: 'bg-white/80 text-indigo-700',
-    darkPill: 'bg-indigo-400/15 text-indigo-200',
+    light: 'from-teal-50 to-teal-100 text-teal-900 ring-teal-200/70 shadow-teal-200/50',
+    dark: 'from-teal-950/70 to-gray-800 text-teal-100 ring-teal-800/40 shadow-black/30',
+    mark: 'text-teal-300', darkMark: 'text-teal-400/40',
+    pill: 'bg-white/80 text-teal-700',
+    darkPill: 'bg-teal-400/15 text-teal-200',
   },
   {
-    light: 'from-emerald-50 to-emerald-100 text-emerald-900 ring-emerald-200/70 shadow-emerald-200/50',
-    dark: 'from-emerald-950/70 to-gray-800 text-emerald-100 ring-emerald-800/40 shadow-black/30',
-    mark: 'text-emerald-300', darkMark: 'text-emerald-400/40',
-    pill: 'bg-white/80 text-emerald-700',
-    darkPill: 'bg-emerald-400/15 text-emerald-200',
+    light: 'from-cyan-50 to-cyan-100 text-cyan-900 ring-cyan-200/70 shadow-cyan-200/50',
+    dark: 'from-cyan-950/70 to-gray-800 text-cyan-100 ring-cyan-800/40 shadow-black/30',
+    mark: 'text-cyan-300', darkMark: 'text-cyan-400/40',
+    pill: 'bg-white/80 text-cyan-700',
+    darkPill: 'bg-cyan-400/15 text-cyan-200',
   },
   {
-    light: 'from-amber-50 to-amber-100 text-amber-900 ring-amber-200/70 shadow-amber-200/50',
-    dark: 'from-amber-950/70 to-gray-800 text-amber-100 ring-amber-800/40 shadow-black/30',
-    mark: 'text-amber-300', darkMark: 'text-amber-400/40',
-    pill: 'bg-white/80 text-amber-700',
-    darkPill: 'bg-amber-400/15 text-amber-200',
+    light: 'from-slate-50 to-slate-100 text-slate-900 ring-slate-200/70 shadow-slate-200/50',
+    dark: 'from-slate-950/70 to-gray-800 text-slate-100 ring-slate-800/40 shadow-black/30',
+    mark: 'text-slate-300', darkMark: 'text-slate-400/40',
+    pill: 'bg-white/80 text-slate-700',
+    darkPill: 'bg-slate-400/15 text-slate-200',
   },
   {
-    light: 'from-rose-50 to-rose-100 text-rose-900 ring-rose-200/70 shadow-rose-200/50',
-    dark: 'from-rose-950/70 to-gray-800 text-rose-100 ring-rose-800/40 shadow-black/30',
-    mark: 'text-rose-300', darkMark: 'text-rose-400/40',
-    pill: 'bg-white/80 text-rose-700',
-    darkPill: 'bg-rose-400/15 text-rose-200',
+    light: 'from-zinc-50 to-zinc-100 text-zinc-900 ring-zinc-200/70 shadow-zinc-200/50',
+    dark: 'from-zinc-950/70 to-gray-800 text-zinc-100 ring-zinc-800/40 shadow-black/30',
+    mark: 'text-zinc-300', darkMark: 'text-zinc-400/40',
+    pill: 'bg-white/80 text-zinc-700',
+    darkPill: 'bg-zinc-400/15 text-zinc-200',
   },
   {
-    light: 'from-sky-50 to-sky-100 text-sky-900 ring-sky-200/70 shadow-sky-200/50',
-    dark: 'from-sky-950/70 to-gray-800 text-sky-100 ring-sky-800/40 shadow-black/30',
-    mark: 'text-sky-300', darkMark: 'text-sky-400/40',
-    pill: 'bg-white/80 text-sky-700',
-    darkPill: 'bg-sky-400/15 text-sky-200',
+    light: 'from-stone-50 to-stone-100 text-stone-900 ring-stone-200/70 shadow-stone-200/50',
+    dark: 'from-stone-950/70 to-gray-800 text-stone-100 ring-stone-800/40 shadow-black/30',
+    mark: 'text-stone-300', darkMark: 'text-stone-400/40',
+    pill: 'bg-white/80 text-stone-700',
+    darkPill: 'bg-stone-400/15 text-stone-200',
   },
   {
-    light: 'from-violet-50 to-violet-100 text-violet-900 ring-violet-200/70 shadow-violet-200/50',
-    dark: 'from-violet-950/70 to-gray-800 text-violet-100 ring-violet-800/40 shadow-black/30',
-    mark: 'text-violet-300', darkMark: 'text-violet-400/40',
-    pill: 'bg-white/80 text-violet-700',
-    darkPill: 'bg-violet-400/15 text-violet-200',
+    light: 'from-neutral-50 to-neutral-100 text-neutral-900 ring-neutral-200/70 shadow-neutral-200/50',
+    dark: 'from-neutral-950/70 to-gray-800 text-neutral-100 ring-neutral-800/40 shadow-black/30',
+    mark: 'text-neutral-300', darkMark: 'text-neutral-400/40',
+    pill: 'bg-white/80 text-neutral-700',
+    darkPill: 'bg-neutral-400/15 text-neutral-200',
   },
 ];
 
@@ -276,7 +276,7 @@ export default function Home() {
         ) : (
           <>
             <button onClick={backToGrades}
-              className={`mb-4 text-sm font-medium flex items-center gap-1 ${darkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-500'}`}>
+              className={`mb-4 text-sm font-medium flex items-center gap-1 ${darkMode ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-500'}`}>
               ← All grades
             </button>
             <h2 className={`text-2xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -297,7 +297,7 @@ export default function Home() {
                           {tab.count} {tab.count === 1 ? 'exam' : 'exams'}
                         </span>
                       </h3>
-                      <button onClick={() => selectGrade(tab.key)} className="shrink-0 text-sm text-indigo-500 hover:text-indigo-400">
+                      <button onClick={() => selectGrade(tab.key)} className="shrink-0 text-sm text-teal-500 hover:text-teal-400">
                         View {tab.label} →
                       </button>
                     </div>

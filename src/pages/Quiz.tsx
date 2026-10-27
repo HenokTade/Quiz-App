@@ -526,7 +526,7 @@ export default function Quiz() {
           <h2 className="text-2xl font-bold mb-4">Quiz Unavailable</h2>
           <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{cooldownMessage}</p>
           <button onClick={() => navigate('/home')}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
+            className="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700">
             Back to Home
           </button>
         </div>
@@ -543,7 +543,7 @@ export default function Quiz() {
           <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{fetchError}</p>
           <button
             onClick={() => { setFetchError(''); setRetryCount((c) => c + 1); }}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+            className="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 transition-colors"
           >
             Try Again
           </button>
@@ -601,7 +601,7 @@ export default function Quiz() {
             ) : (
               <button
                 onClick={handleReturnToQuiz}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors text-lg"
+                className="w-full py-3 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-xl transition-colors text-lg"
               >
                 Return to Quiz
               </button>
@@ -639,7 +639,7 @@ export default function Quiz() {
             <div className={`px-4 py-2 rounded-lg font-bold transition-all ${
               criticalTimer ? 'bg-red-500 animate-pulse scale-110'
               : totalTimeLeft <= Math.round(initialTime * 0.25) ? 'bg-yellow-500'
-              : 'bg-indigo-600'
+              : 'bg-teal-600'
             } text-white`}>
               ⏱️ {Math.floor(totalTimeLeft / 60)}:{(totalTimeLeft % 60).toString().padStart(2, '0')}
             </div>
@@ -658,7 +658,7 @@ export default function Quiz() {
 
         <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
           <div
-            className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+            className="bg-teal-600 h-2 rounded-full transition-all duration-300"
             style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
           />
         </div>
@@ -671,7 +671,7 @@ export default function Quiz() {
             const isBookmarked = bookmarkedQuestions.includes(idx);
 
             let btnClass = isCurrent
-              ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-1 scale-110'
+              ? 'bg-teal-600 text-white ring-2 ring-teal-400 ring-offset-1 scale-110'
               : isAnswered
                 ? 'bg-green-500 text-white hover:bg-green-600'
                 : isBookmarked
@@ -751,18 +751,18 @@ export default function Quiz() {
                 } else if (index === selectedAnswer && !isCorrect) {
                   buttonClass += 'bg-red-600 border-red-600 text-white';
                 } else {
-                  buttonClass += darkMode ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-500';
+                  buttonClass += darkMode ? 'bg-gray-700 border-gray-600 text-gray-400' : 'bg-gray-100 border-gray-300 text-gray-600';
                 }
               } else {
                 buttonClass += selectedAnswer === index
-                  ? darkMode ? 'border-indigo-500 bg-indigo-900/50 text-indigo-300' : 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                  : darkMode ? 'bg-gray-700 border-gray-600 text-white hover:border-gray-500' : 'bg-white border-gray-300 text-gray-700 hover:border-indigo-400';
+                  ? darkMode ? 'border-teal-500 bg-teal-900/50 text-teal-300' : 'border-teal-600 bg-teal-50 text-teal-700'
+                  : darkMode ? 'bg-gray-700 border-gray-600 text-white hover:border-gray-500' : 'bg-white border-gray-300 text-gray-700 hover:border-teal-400';
               }
 
               return (
                 <button
                   key={index}
-                  onClick={() => handleAnswerSelect(index)}
+                  onClick={() => !showFeedback && setSelectedAnswer(index)}
                   disabled={showFeedback}
                   className={buttonClass}
                 >
@@ -787,14 +787,14 @@ export default function Quiz() {
             <button
               onClick={handleSubmitAnswer}
               disabled={feedbackMode === 'after_each' && selectedAnswer === null}
-              className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full mt-6 bg-teal-600 text-white py-3 rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {feedbackMode === 'after_each' ? 'Submit Answer' : currentQuestionIndex < questions.length - 1 ? 'Next →' : 'Submit'}
             </button>
           ) : (
             <button
               onClick={handleNextQuestion}
-              className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+              className="w-full mt-6 bg-teal-600 text-white py-3 rounded-lg hover:bg-teal-700 transition-colors"
             >
               {currentQuestionIndex < questions.length - 1 ? 'Next →' : 'View Results'}
             </button>
@@ -818,7 +818,7 @@ export default function Quiz() {
               </button>
               <button
                 onClick={handleConfirmSubmit}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
               >
                 Submit
               </button>

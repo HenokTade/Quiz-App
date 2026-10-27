@@ -93,22 +93,22 @@ export default function Register() {
     ? 'bg-gray-800/80 border border-gray-700'
     : 'bg-white/80 border border-gray-200';
   const inputCls = darkMode
-    ? 'bg-gray-700 text-white border-gray-600 focus:border-indigo-500 placeholder-gray-400'
-    : 'bg-gray-50 text-gray-900 border-gray-300 focus:border-indigo-500 placeholder-gray-400';
+    ? 'bg-gray-700 text-white border-gray-600 focus:border-teal-500 placeholder-gray-400'
+    : 'bg-gray-50 text-gray-900 border-gray-300 focus:border-teal-500 placeholder-gray-400';
   const labelCls = darkMode ? 'text-gray-300' : 'text-gray-700';
   const pageBg = darkMode
-    ? 'bg-gradient-to-br from-gray-950 via-gray-900 to-indigo-950'
-    : 'bg-gradient-to-br from-slate-100 via-white to-indigo-50';
+    ? 'bg-gradient-to-br from-gray-950 via-gray-900 to-teal-950'
+    : 'bg-gradient-to-br from-slate-100 via-white to-teal-50';
 
   return (
     <div className={`min-h-screen flex items-center justify-center px-4 ${pageBg}`}>
       <div className={`max-w-md w-full rounded-2xl shadow-2xl backdrop-blur-sm p-8 ${cardBg}`}>
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full border-4 border-indigo-500 shadow-xl mb-4 bg-white overflow-hidden">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full border-4 border-teal-500 shadow-xl mb-4 bg-white overflow-hidden">
             <img src="/logo.jpg" alt="Fenote Tsidk Sunday School Logo" className="w-full h-full object-cover" />
           </div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-1">Fenote Tsidk Sunday School</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-teal-500 mb-1">Fenote Tsidk Sunday School</p>
           <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Create account</h1>
           <p className={`mt-1 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Get started with Fenote Exam today</p>
         </div>
@@ -130,12 +130,12 @@ export default function Register() {
           disabled={googleLoading || loading}
           className={`w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all duration-200 mb-5
             ${darkMode
-              ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600 hover:border-indigo-500'
-              : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-indigo-400'}
+              ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600 hover:border-teal-500'
+              : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-teal-400'}
             disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-md active:scale-[0.98]`}
         >
           {googleLoading ? (
-            <svg className="animate-spin w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin w-5 h-5 text-teal-500" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
@@ -167,7 +167,7 @@ export default function Register() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your full name"
-              className={`w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-indigo-500/30 ${inputCls}`}
+              className={`w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-teal-500/30 ${inputCls}`}
               required
             />
           </div>
@@ -179,7 +179,7 @@ export default function Register() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className={`w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-indigo-500/30 ${inputCls}`}
+              className={`w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-teal-500/30 ${inputCls}`}
               required
             />
           </div>
@@ -191,7 +191,7 @@ export default function Register() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className={`w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-indigo-500/30 ${inputCls}`}
+              className={`w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-teal-500/30 ${inputCls}`}
               required
             />
           </div>
@@ -199,7 +199,7 @@ export default function Register() {
             id="register-submit-btn"
             type="submit"
             disabled={loading || googleLoading}
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold text-sm shadow-lg hover:from-indigo-500 hover:to-purple-500 transition-all duration-200 hover:shadow-indigo-500/30 hover:shadow-xl active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 text-white font-semibold text-sm shadow-lg hover:from-teal-500 hover:to-cyan-500 transition-all duration-200 hover:shadow-teal-500/30 hover:shadow-xl active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -215,7 +215,7 @@ export default function Register() {
 
         <p className={`mt-6 text-center text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           Already have an account?{' '}
-          <Link to="/login" className="text-indigo-500 hover:text-indigo-400 font-semibold transition-colors">
+          <Link to="/login" className="text-teal-500 hover:text-teal-400 font-semibold transition-colors">
             Sign in
           </Link>
         </p>

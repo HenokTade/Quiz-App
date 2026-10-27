@@ -85,8 +85,8 @@ function StudentView() {
             animate-[fadeInUp_0.5s_ease-out_0.3s_forwards]`}>Dashboard</h1>
           <button
             onClick={() => navigate('/home')}
-            className="bg-indigo-600 text-white px-6 py-2 rounded-lg
-              hover:bg-indigo-700
+            className="bg-teal-600 text-white px-6 py-2 rounded-lg
+              hover:bg-teal-700
               transition-transform duration-100
               active:scale-[0.95]"
           >
@@ -97,14 +97,14 @@ function StudentView() {
         {loading ? (
           <div className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             <div className="inline-block animate-pulse h-4 w-4 rounded-full
-              bg-indigo-500 dark:bg-indigo-400"></div>
+              bg-teal-500 dark:bg-teal-400"></div>
             <span className="ml-2">Loading dashboard...</span>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {[
-                { label: 'Total Quizzes Taken', value: results.length, cls: darkMode ? 'text-indigo-400' : 'text-indigo-600' },
+                { label: 'Total Quizzes Taken', value: results.length, cls: darkMode ? 'text-teal-400' : 'text-teal-600' },
                 { label: 'Average Score', value: results.length > 0 ? `${Math.round(results.reduce((a, r) => a + (r.score / r.totalQuestions) * 100, 0) / results.length)}%` : '0%', cls: darkMode ? 'text-green-400' : 'text-green-600' },
                 { label: 'Categories Explored', value: highScores.length, cls: darkMode ? 'text-purple-400' : 'text-purple-600' },
               ].map((s, index) => (

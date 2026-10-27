@@ -117,7 +117,7 @@ export default function Results() {
                       {notAnswered ? '— Not answered' : (isCorrect ? '✓ Correct' : `✗ Your answer: ${userLetter}. ${question.options[answer!.selectedAnswer]}`)}
                     </p>
                     {notAnswered && (
-                      <p className="text-indigo-400 mt-1">
+                      <p className="text-teal-400 mt-1">
                         Correct: {correctLetter}. {question.options[question.correctAnswer]}
                       </p>
                     )}
@@ -139,7 +139,7 @@ export default function Results() {
 
           <button
             onClick={handleRetake}
-            className="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700"
+            className="bg-teal-600 text-white px-8 py-3 rounded-lg hover:bg-teal-700"
           >
             Take Another Quiz
           </button>
